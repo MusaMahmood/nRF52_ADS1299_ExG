@@ -871,7 +871,7 @@ int main(void) {
     if (NRF_LOG_PROCESS() == false) {
       power_manage();
       if (m_drdy) {
-        NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
+        //NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
         m_drdy = false;
         //Acquire Data Samples
         get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);

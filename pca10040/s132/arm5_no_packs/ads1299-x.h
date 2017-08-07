@@ -136,6 +136,11 @@ extern "C" {
 //Use multi-line copy from excel file.
 //0xB6 = 250SPS
 //0xB5 = 500SPS
+//0xB4 = 1kSPS
+//0xB3 = 2kSPS
+//0xB2 = 4kSPS
+//0xB1 = 8kSPS
+//0xB0 = 16kSPS
 #define ADS1299_REGDEFAULT_CONFIG1 0xB6 ///< Configuration register 1. Controls conversion mode and data rate.
 #define ADS1299_REGDEFAULT_CONFIG2 0xD2 ///< Configuration register 2. Controls LOFF comparator, reference, CLK pin, and test signal.
 #define ADS1299_REGDEFAULT_CONFIG3 0xEC
