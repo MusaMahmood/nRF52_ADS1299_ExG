@@ -84,20 +84,21 @@
 //TODO: ADS1299 Stuff:
 #include "ads1299-x.h"
 #include "ble_dis.h"
-//#include "ble_eeg.h"
+#include "ble_eeg.h"
 #include "nrf_delay.h"
 #include "nrf_drv_gpiote.h"
-//#define MANUFACTURER_NAME "YeoLabs" /**< Manufacturer. Will be passed to Device Information Service. */
+
 #define DEVICE_MODEL_NUMBERSTR "Version 3.1"
 #define DEVICE_FIRMWARE_STRING "Version 13.1.0"
 static bool m_drdy = false;
-//ble_eeg_t m_eeg;
+ble_eeg_t m_eeg;
 #endif
 
 #define APP_FEATURE_NOT_SUPPORTED BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2 /**< Reply when unsupported features are requested. */
 
 #define DEVICE_NAME "EEG 250Hz"         //"nRF52_EEG"         /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME "Potato Labs" /**< Manufacturer. Will be passed to Device Information Service. */
+//#define MANUFACTURER_NAME "YeoLabs"   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL 300            /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS 180  /**< The advertising timeout in units of seconds. */
 
@@ -348,7 +349,8 @@ static void services_init(void) {
        err_code = ble_yy_service_init(&yys_init, &yy_init);
        APP_ERROR_CHECK(err_code);
      */
-  //TODO:ble_eeg_service_init(&m_eeg);
+  //TODONT:
+  ble_eeg_service_init(&m_eeg);
   /**@Device Information Service:*/
   uint32_t err_code;
   ble_dis_init_t dis_init;
@@ -570,7 +572,7 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
        ble_yys_on_ble_evt(&m_yys, p_ble_evt);
      */
      //TODO:
-  //ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
+  ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
 }
 
 /**@brief Function for dispatching a system event to interested modules.
@@ -851,7 +853,7 @@ int main(void) {
   ads1299_check_id();
   ads1299_start_rdatac();
   ads1299_standby();
-  nrf_delay_ms(1000);
+  nrf_delay_ms(10);
   //ads1299_wake();
 #endif
   // Start execution.
@@ -861,10 +863,10 @@ int main(void) {
   nrf_gpio_pin_clear(LED_3);
   nrf_gpio_pin_set(LED_4);
 #endif
-  int32_t eeg1;
-  int32_t eeg2;
-  int32_t eeg3;
-  int32_t eeg4;
+  int32_t eeg1 = 0x0000;
+  int32_t eeg2 = 0x0000;
+  int32_t eeg3 = 0x0000;
+  int32_t eeg4 = 0x0000;
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
   // Enter main loop.
   for (;;) {
@@ -876,7 +878,7 @@ int main(void) {
         //Acquire Data Samples
         get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
         //        //Send 32-bit data samples to be organized into buffer
-  //      ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
+        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
       }
     }
     
