@@ -84,15 +84,14 @@
 //TODO: ADS1299 Stuff:
 #include "ads1299-x.h"
 #include "ble_dis.h"
-#include "ble_eeg.h"
+//#include "ble_eeg.h"
 #include "nrf_delay.h"
 #include "nrf_drv_gpiote.h"
 //#define MANUFACTURER_NAME "YeoLabs" /**< Manufacturer. Will be passed to Device Information Service. */
 #define DEVICE_MODEL_NUMBERSTR "Version 3.1"
 #define DEVICE_FIRMWARE_STRING "Version 13.1.0"
-#define CONN_CFG_TAG 1
 static bool m_drdy = false;
-ble_eeg_t m_eeg;
+//ble_eeg_t m_eeg;
 #endif
 
 #define APP_FEATURE_NOT_SUPPORTED BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2 /**< Reply when unsupported features are requested. */
@@ -134,10 +133,7 @@ static nrf_ble_gatt_t m_gatt;                            /**< GATT module instan
 //static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 static ble_uuid_t m_adv_uuids[] =
     {
-        {BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE, BLE_UUID_TYPE_BLE},
-#if defined(BLE_BAS)
-        {BLE_UUID_BATTERY_SERVICE, BLE_UUID_TYPE_BLE},
-#endif
+        //{BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE, BLE_UUID_TYPE_BLE},
         {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 
 static void advertising_start(bool erase_bonds);
@@ -352,7 +348,7 @@ static void services_init(void) {
        err_code = ble_yy_service_init(&yys_init, &yy_init);
        APP_ERROR_CHECK(err_code);
      */
-  ble_eeg_service_init(&m_eeg);
+  //TODO:ble_eeg_service_init(&m_eeg);
   /**@Device Information Service:*/
   uint32_t err_code;
   ble_dis_init_t dis_init;
@@ -477,8 +473,8 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
   switch (p_ble_evt->header.evt_id) {
   case BLE_GAP_EVT_DISCONNECTED:
     NRF_LOG_INFO("Disconnected.\r\n");
-    err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
+    //err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+    //APP_ERROR_CHECK(err_code);
 #if defined(ADS1299)
     ads1299_standby();
 #endif
@@ -493,8 +489,8 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     ads1299_wake();
 #endif
     NRF_LOG_INFO("Connected.\r\n");
-    err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-    APP_ERROR_CHECK(err_code);
+    //err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+   // APP_ERROR_CHECK(err_code);
     m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 #if defined(BOARD_PCA10040)
     nrf_gpio_pin_set(LED_3);
@@ -505,16 +501,16 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
   case BLE_GATTC_EVT_TIMEOUT:
     // Disconnect on GATT Client timeout event.
     NRF_LOG_DEBUG("GATT Client Timeout.\r\n");
-    err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
-        BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    //err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
+   //     BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     APP_ERROR_CHECK(err_code);
     break; // BLE_GATTC_EVT_TIMEOUT
 
   case BLE_GATTS_EVT_TIMEOUT:
     // Disconnect on GATT Server timeout event.
     NRF_LOG_DEBUG("GATT Server Timeout.\r\n");
-    err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
-        BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    //err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
+    //    BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     APP_ERROR_CHECK(err_code);
     break; // BLE_GATTS_EVT_TIMEOUT
 
@@ -573,7 +569,8 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
        ble_xxs_on_ble_evt(&m_xxs, p_ble_evt);
        ble_yys_on_ble_evt(&m_yys, p_ble_evt);
      */
-  ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
+     //TODO:
+  //ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
 }
 
 /**@brief Function for dispatching a system event to interested modules.
@@ -626,21 +623,6 @@ static void ble_stack_init(void) {
   ble_cfg.gap_cfg.role_count_cfg.central_role_count = 0;
   ble_cfg.gap_cfg.role_count_cfg.central_sec_count = 0;
   err_code = sd_ble_cfg_set(BLE_GAP_CFG_ROLE_COUNT, &ble_cfg, ram_start);
-  APP_ERROR_CHECK(err_code);
-
-  // Configure the maximum ATT MTU.
-  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
-  ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
-  ble_cfg.conn_cfg.params.gatt_conn_cfg.att_mtu = NRF_BLE_GATT_MAX_MTU_SIZE;
-  err_code = sd_ble_cfg_set(BLE_CONN_CFG_GATT, &ble_cfg, ram_start);
-  APP_ERROR_CHECK(err_code);
-
-  // Configure the maximum event length.
-  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
-  ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
-  ble_cfg.conn_cfg.params.gap_conn_cfg.event_length = 320;
-  ble_cfg.conn_cfg.params.gap_conn_cfg.conn_count = BLE_GAP_CONN_COUNT_DEFAULT;
-  err_code = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
 
   // Enable BLE stack.
@@ -805,27 +787,15 @@ static void advertising_start(bool erase_bonds) {
 #if defined(ADS1299)
 
 void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-  m_drdy = true;
   UNUSED_PARAMETER(pin);
   UNUSED_PARAMETER(action);
+  m_drdy = true;
 }
 
 static void ads1299_gpio_init(void) {
-#if defined(BOARD_NRF_BREAKOUT)
-  nrf_gpio_cfg_output(13);
-  nrf_gpio_cfg_output(14);
-#endif
-#if defined(BOARD_FULL_EEG_V1)
-  nrf_gpio_cfg_output(3);
-  nrf_gpio_cfg_output(2);
-#endif
-#if defined(BOARD_PCA10028)
-  nrf_gpio_cfg_output(21);
-  nrf_gpio_cfg_output(22);
-#endif
 #if defined(BOARD_PCA10040)
-  //nrf_gpio_cfg_output(LED_1);
-  //nrf_gpio_cfg_output(LED_2);
+  nrf_gpio_cfg_output(LED_1);
+  nrf_gpio_cfg_output(LED_2);
   nrf_gpio_cfg_output(LED_3);
   nrf_gpio_cfg_output(LED_4);
 #endif
@@ -833,10 +803,6 @@ static void ads1299_gpio_init(void) {
 #if defined(BOARD_NRF_BREAKOUT) | defined(BOARD_PCA10028) | defined(BOARD_PCA10040)
   nrf_gpio_pin_dir_set(ADS1299_DRDY_PIN, NRF_GPIO_PIN_DIR_INPUT); //sets 'direction' = input/output
   nrf_gpio_pin_dir_set(ADS1299_PWDN_RST_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
-#endif
-#if defined(BOARD_FULL_EEG_V1)
-  nrf_gpio_pin_dir_set(ADS1299_PWDN_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
-  nrf_gpio_pin_dir_set(ADS1299_RESET_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
 #endif
   uint32_t err_code;
   if (!nrf_drv_gpiote_is_init()) {
@@ -859,11 +825,11 @@ static void ads1299_gpio_init(void) {
 /**@brief Function for application main entry.
  */
 int main(void) {
-  bool erase_bonds;
+  bool erase_bonds = false;
   // Initialize.
   log_init();
   timers_init();
-  buttons_leds_init(&erase_bonds);
+  //buttons_leds_init(&erase_bonds);
   ble_stack_init();
 #if defined(ADS1299)
   ads1299_gpio_init();
@@ -872,9 +838,6 @@ int main(void) {
   gatt_init();
   advertising_init();
   services_init();
-#if defined(BLE_BAS)
-  adc_configure();
-#endif
   conn_params_init();
   peer_manager_init();
 #if defined(ADS1299)
@@ -888,14 +851,16 @@ int main(void) {
   ads1299_check_id();
   ads1299_start_rdatac();
   ads1299_standby();
+  nrf_delay_ms(1000);
+  //ads1299_wake();
 #endif
   // Start execution.
   application_timers_start();
+  advertising_start(erase_bonds);
 #if defined(BOARD_PCA10040)
   nrf_gpio_pin_clear(LED_3);
   nrf_gpio_pin_set(LED_4);
 #endif
-  advertising_start(erase_bonds);
   int32_t eeg1;
   int32_t eeg2;
   int32_t eeg3;
@@ -905,19 +870,53 @@ int main(void) {
   for (;;) {
     if (NRF_LOG_PROCESS() == false) {
       power_manage();
+      if (m_drdy) {
+        NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
+        m_drdy = false;
+        //Acquire Data Samples
+        get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
+        //        //Send 32-bit data samples to be organized into buffer
+  //      ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
+      }
     }
-    if (m_drdy) {
-      NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
-      m_drdy = false;
-      //Acquire Data Samples
-//      get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
-      //        //Send 32-bit data samples to be organized into buffer
-//      ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
-    }
+    
     //TODO: FIX THIS
   }
 }
+//NOTE: ORIG BELOW
+/*
+int main(void)
+{
+    bool erase_bonds;
 
+    // Initialize.
+    log_init();
+    timers_init();
+    buttons_leds_init(&erase_bonds);
+    ble_stack_init();
+    gap_params_init();
+    gatt_init();
+    advertising_init();
+    services_init();
+    conn_params_init();
+    peer_manager_init();
+
+    // Start execution.
+    NRF_LOG_INFO("Template example started.\r\n");
+    application_timers_start();
+
+    advertising_start(erase_bonds);
+
+    // Enter main loop.
+    for (;;)
+    {
+        if (NRF_LOG_PROCESS() == false)
+        {
+            power_manage();
+        }
+    }
+}
+*/
 /**
  * @}
  */

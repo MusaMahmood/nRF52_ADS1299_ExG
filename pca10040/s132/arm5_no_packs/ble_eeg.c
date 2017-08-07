@@ -335,11 +335,12 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
   ble_uuid_t service_uuid;
   ble_uuid128_t base_uuid = BMS_UUID_BASE;
   service_uuid.uuid = BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE;
-//  err_code = sd_ble_uuid_vs_add(&base_uuid, &service_uuid.type);
-//  APP_ERROR_CHECK(err_code);
+  err_code = sd_ble_uuid_vs_add(&base_uuid, &service_uuid.type);
+  APP_ERROR_CHECK(err_code);
+
   p_eeg->conn_handle = BLE_CONN_HANDLE_INVALID;
   
-  BLE_UUID_BLE_ASSIGN(service_uuid, BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE);
+  //BLE_UUID_BLE_ASSIGN(service_uuid, BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE);
 
   err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY,
       &service_uuid,
@@ -347,8 +348,8 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
 
   APP_ERROR_CHECK(err_code);
   /*ADD CHARACTERISTIC(S)*/
-  eeg_ch1_char_add(p_eeg);
-  eeg_ch2_char_add(p_eeg);
+  //eeg_ch1_char_add(p_eeg);
+  //eeg_ch2_char_add(p_eeg);
   //eeg_ch3_char_add(p_eeg);
   //eeg_ch4_char_add(p_eeg);
 }
