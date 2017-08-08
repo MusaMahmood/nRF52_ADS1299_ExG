@@ -178,9 +178,15 @@ void ads1299_check_id(void) {
   tx_data_spi[1] = 0x01; //Intend to read 1 byte
   tx_data_spi[2] = 0x00; //This will be replaced by Reg Data
   spi_xfer_done = false;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 7)); //why two extra bytes?
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 7)); 
+//  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 3)); 
   while (!spi_xfer_done) { __WFE(); }
+  //NOTE: CHANGES FROM [2] to [3] for EASY DMA
+#if SPI0_USE_EASY_DMA==1
+  device_id_reg_value = rx_data_spi[3];
+#else
   device_id_reg_value = rx_data_spi[2];
+#endif
   bool is_ads_1299_4 = (device_id_reg_value & 0x1F) == (ADS1299_4_DEVICE_ID);
   bool is_ads_1299_6 = (device_id_reg_value & 0x1F) == (ADS1299_6_DEVICE_ID);
   bool is_ads_1299 = (device_id_reg_value & 0x1F) == (ADS1299_DEVICE_ID);
@@ -278,13 +284,15 @@ void get_eeg_voltage_sample(int32_t *eeg1) {
   while (!spi_xfer_done) { __WFE(); }
   do {
     if (tx_rx_data[0] == 0xC0) {
-      *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
+        *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
       break;
     }
     cnt++;
     nrf_delay_us(1);
   } while (cnt < 255);
-//        NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
+//        NRF_LOG_INFO("[0x%x%x%x]\r\n",tx_rx_data[3],tx_rx_data[4],tx_rx_data[5]);
+        *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
+        //  NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
 }
 
 

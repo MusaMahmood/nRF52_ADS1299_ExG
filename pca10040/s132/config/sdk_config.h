@@ -2151,7 +2151,7 @@
  
 
 #ifndef SPI0_USE_EASY_DMA
-#define SPI0_USE_EASY_DMA 0
+#define SPI0_USE_EASY_DMA 1
 #endif
 
 // <o> SPI0_DEFAULT_FREQUENCY  - SPI frequency
