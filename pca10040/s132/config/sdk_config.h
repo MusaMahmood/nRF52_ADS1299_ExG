@@ -2151,7 +2151,7 @@
  
 
 #ifndef SPI0_USE_EASY_DMA
-#define SPI0_USE_EASY_DMA 1
+#define SPI0_USE_EASY_DMA 0
 #endif
 
 // <o> SPI0_DEFAULT_FREQUENCY  - SPI frequency
@@ -2358,7 +2358,7 @@
  
 
 #ifndef TIMER0_ENABLED
-#define TIMER0_ENABLED 0
+#define TIMER0_ENABLED 1
 #endif
 
 // <q> TIMER1_ENABLED  - Enable TIMER1 instance
@@ -3072,6 +3072,8 @@
 #define APP_TIMER_ENABLED 1
 #endif
 #if  APP_TIMER_ENABLED
+
+#define APP_TIMER_SAMPLING 1
 // <o> APP_TIMER_CONFIG_RTC_FREQUENCY  - Configure RTC prescaler.
  
 // <0=> 32768 Hz 

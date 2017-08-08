@@ -130,6 +130,8 @@ void ble_eeg_update(ble_eeg_t *p_eeg, int32_t *eeg1, int32_t *eeg2, int32_t *eeg
 
 void ble_eeg_update_2ch(ble_eeg_t *p_eeg, int32_t *eeg1, int32_t *eeg2);
 
+void ble_eeg_update_1ch(ble_eeg_t *p_eeg, int32_t *eeg1);
+
 uint32_t ble_eeg_send_24bit_array_ch1(ble_eeg_t *p_eeg);
 
 uint32_t ble_eeg_send_24bit_array_ch2(ble_eeg_t *p_eeg);

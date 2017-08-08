@@ -43,7 +43,7 @@ uint8_t ads1299_default_registers[] = {
  * @param event
  */
 
-static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);
+static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(0);
 static volatile bool spi_xfer_done;
 
 /**
@@ -64,7 +64,7 @@ void ads_spi_init(void) {
   nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
   spi_config.bit_order = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;
   //SCLK = 1MHz is right speed because fCLK = (1/2)*SCLK, and fMOD = fCLK/4, and fMOD MUST BE 128kHz. Do the math.
-  spi_config.frequency = NRF_DRV_SPI_FREQ_2M;
+  spi_config.frequency = NRF_DRV_SPI_FREQ_1M;
   spi_config.irq_priority = APP_IRQ_PRIORITY_LOW;
   spi_config.mode = NRF_DRV_SPI_MODE_1; //CPOL = 0 (Active High); CPHA = TRAILING (1)
   spi_config.miso_pin = ADS1299_SPI_MISO_PIN;
@@ -117,8 +117,11 @@ void ads1299_standby(void) {
   uint8_t rx_data_spi;
 
   tx_data_spi = ADS1299_OPC_STANDBY;
-
+  spi_xfer_done = false;
   nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1);
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   NRF_LOG_INFO(" ADS1299-x placed in standby mode...\r\n");
 }
 
@@ -127,8 +130,11 @@ void ads1299_wake(void) {
   uint8_t rx_data_spi;
 
   tx_data_spi = ADS1299_OPC_WAKEUP;
-
-  nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1));
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   nrf_delay_ms(10); // Allow time to wake up - 10ms
   NRF_LOG_INFO(" ADS1299-x Wakeup..\r\n");
 }
@@ -138,8 +144,11 @@ void ads1299_soft_start_conversion(void) {
   uint8_t rx_data_spi;
 
   tx_data_spi = ADS1299_OPC_START;
-
-  nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1));
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   NRF_LOG_INFO(" Start ADC conversion..\r\n");
 }
 
@@ -148,8 +157,11 @@ void ads1299_stop_rdatac(void) {
   uint8_t rx_data_spi;
 
   tx_data_spi = ADS1299_OPC_SDATAC;
-
-  nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1));
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   NRF_LOG_INFO(" Continuous Data Output Disabled..\r\n");
 }
 
@@ -158,8 +170,11 @@ void ads1299_start_rdatac(void) {
   uint8_t rx_data_spi;
 
   tx_data_spi = ADS1299_OPC_RDATAC;
-
-  nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, &tx_data_spi, 1, &rx_data_spi, 1));
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   NRF_LOG_INFO(" Continuous Data Output Enabled..\r\n");
 }
 
@@ -167,11 +182,15 @@ void ads1299_check_id(void) {
   uint8_t device_id_reg_value;
   uint8_t tx_data_spi[3];
   uint8_t rx_data_spi[7];
+  memset(rx_data_spi, 0, 7);
   tx_data_spi[0] = 0x20; //Request Device ID
   tx_data_spi[1] = 0x01; //Intend to read 1 byte
   tx_data_spi[2] = 0x00; //This will be replaced by Reg Data
-  nrf_drv_spi_transfer(&spi, tx_data_spi, 2 + tx_data_spi[1], rx_data_spi, 2 + tx_data_spi[1]);
-  nrf_delay_ms(20); //Wait for response:
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 7)); //why two extra bytes?
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  } //Wait for response:
   device_id_reg_value = rx_data_spi[2];
   bool is_ads_1299_4 = (device_id_reg_value & 0x1F) == (ADS1299_4_DEVICE_ID);
   bool is_ads_1299_6 = (device_id_reg_value & 0x1F) == (ADS1299_6_DEVICE_ID);
@@ -214,7 +233,12 @@ void ads1299_init_regs(void) {
   for (int j = 0; j < num_registers; ++j) {
     tx_data_spi[j + 2] = ads1299_default_registers[j];
   }
-  err_code = nrf_drv_spi_transfer(&spi, tx_data_spi, num_registers + 2, rx_data_spi, num_registers + 2);
+  spi_xfer_done = false;
+  err_code = nrf_drv_spi_transfer(&spi, tx_data_spi, num_registers, rx_data_spi, num_registers);
+  APP_ERROR_CHECK(err_code);
+//  while (!spi_xfer_done) {
+//    __WFE();
+//  }
   nrf_delay_ms(150);
   NRF_LOG_INFO(" Power-on reset and initialization procedure.. EC: %d \r\n", err_code);
 }
@@ -244,6 +268,7 @@ void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_
     cnt++;
     nrf_delay_us(1);
   } while (cnt < 255);
-NRF_LOG_INFO("B0-2 = [0x%x 0x%x 0x%x | cnt=%d]\r\n",tx_rx_data[0],tx_rx_data[1],tx_rx_data[2],cnt);
-NRF_LOG_INFO("DATA:[0x%x 0x%x]\r\n",*eeg1,*eeg2);
+  //NRF_LOG_INFO("B0-2 = [0x%x 0x%x 0x%x | cnt=%d]\r\n",tx_rx_data[0],tx_rx_data[1],tx_rx_data[2],cnt);
+  //NRF_LOG_INFO("DATA:[0x%x 0x%x]\r\n",*eeg1,*eeg2);
+  //NRF_LOG_INFO("DATA:[0x%x 0x%x 0x%x 0x%x]\r\n",*eeg1,*eeg2,*eeg3,*eeg4);
 }

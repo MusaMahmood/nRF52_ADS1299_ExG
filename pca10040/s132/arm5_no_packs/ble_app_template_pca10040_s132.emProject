@@ -79,6 +79,7 @@
       <file file_name="../../../../../../components/drivers_nrf/gpiote/nrf_drv_gpiote.c" />
       <file file_name="../../../../../../components/drivers_nrf/uart/nrf_drv_uart.c" />
       <file file_name="../../../../../../components/drivers_nrf/spi_master/nrf_drv_spi.c" />
+      <file file_name="../../../../../../components/drivers_nrf/timer/nrf_drv_timer.c" />
     </folder>
     <folder Name="nRF_Libraries">
       <file file_name="../../../../../../components/libraries/button/app_button.c" />
