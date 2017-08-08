@@ -141,7 +141,7 @@ extern "C" {
 //0xB2 = 4kSPS
 //0xB1 = 8kSPS
 //0xB0 = 16kSPS
-#define ADS1299_REGDEFAULT_CONFIG1 0xB2 ///< Configuration register 1. Controls conversion mode and data rate.
+#define ADS1299_REGDEFAULT_CONFIG1 0xB3 ///< Configuration register 1. Controls conversion mode and data rate.
 #define ADS1299_REGDEFAULT_CONFIG2 0xD2 ///< Configuration register 2. Controls LOFF comparator, reference, CLK pin, and test signal.
 #define ADS1299_REGDEFAULT_CONFIG3 0xEC
 #define ADS1299_REGDEFAULT_LOFF 0x02   ///< Lead-off control register. Controls lead-off frequency, magnitude, and threshold.
@@ -214,5 +214,5 @@ void ads1299_start_rdatac(void);
 void ads1299_check_id(void);
 
 void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_t *eeg4);
-
+void get_eeg_voltage_sample(int32_t *eeg1);
 #endif // ADS1299_H__

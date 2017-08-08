@@ -883,7 +883,7 @@ int main(void) {
   nrf_gpio_pin_set(LED_4);
 #endif
   uint32_t time_ms = 1000;
-  uint32_t samples = 0; //
+  uint32_t samples = 0;
   int32_t eeg1 = 0x0000;
   int32_t eeg2 = 0x0000;
   int32_t eeg3 = 0x0000;
@@ -910,11 +910,11 @@ int main(void) {
         //NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
         m_drdy = false;
         //Acquire Data Samples
+        samples += 1;
         get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
         //        //Send 32-bit data samples to be organized into buffer
         //        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
 //        ble_eeg_update_1ch(&m_eeg, &eeg1);
-        samples += 1;
       }
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
         if (m_timer) {
