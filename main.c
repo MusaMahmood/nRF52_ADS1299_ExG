@@ -112,8 +112,8 @@ static bool m_timer = false;
 #define APP_ADV_INTERVAL 300           /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS 180 /**< The advertising timeout in units of seconds. */
 
-#define MIN_CONN_INTERVAL MSEC_TO_UNITS(16, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(16, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
+#define MIN_CONN_INTERVAL MSEC_TO_UNITS(100, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(200, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY 0                                   /**< Slave latency. */
 #define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)  /**< Connection supervisory timeout (4 seconds). */
 
@@ -873,7 +873,8 @@ int main(void) {
   ads1299_start_rdatac();
   ads1299_standby();
   nrf_delay_ms(10);
-//ads1299_wake();
+//  nrf_delay_ms(500);
+//  ads1299_wake();
 #endif
   // Start execution.
   application_timers_start();
@@ -882,10 +883,10 @@ int main(void) {
   nrf_gpio_pin_clear(LED_3);
   nrf_gpio_pin_set(LED_4);
 #endif
-  uint32_t time_ms = 1000;
-  uint32_t samples = 0;
+  uint16_t samples = 0;
   int32_t eeg1 = 0x0000;
   int32_t eeg2 = 0x0000;
+
   int32_t eeg3 = 0x0000;
   int32_t eeg4 = 0x0000;
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
@@ -911,7 +912,8 @@ int main(void) {
         m_drdy = false;
         //Acquire Data Samples
         samples += 1;
-        get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
+//        get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
+        get_eeg_voltage_sample(&eeg1);
         //        //Send 32-bit data samples to be organized into buffer
         //        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
 //        ble_eeg_update_1ch(&m_eeg, &eeg1);
