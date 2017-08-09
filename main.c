@@ -72,7 +72,7 @@
 #include "nrf.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_gpio.h"
-#include "peer_manager.h"
+//#include "peer_manager.h"
 #include "sensorsim.h"
 #include "softdevice_handler.h"
 
@@ -112,10 +112,12 @@ static bool m_timer = false;
 #define APP_ADV_INTERVAL 300           /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS 180 /**< The advertising timeout in units of seconds. */
 
-#define MIN_CONN_INTERVAL MSEC_TO_UNITS(100, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(200, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
+#define MIN_CONN_INTERVAL MSEC_TO_UNITS(7.5, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(500, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY 0                                   /**< Slave latency. */
 #define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)  /**< Connection supervisory timeout (4 seconds). */
+
+#define CONN_CFG_TAG                    1                                               /**< A tag that refers to the BLE stack configuration we set with @ref sd_ble_cfg_set. Default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(5000) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(30000) /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
@@ -163,7 +165,7 @@ void timer_led_event_handler(nrf_timer_event_t event_type, void *p_context) {
   }
 }
 #endif
-static void advertising_start(bool erase_bonds);
+//static void advertising_start(bool erase_bonds);
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -180,89 +182,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
   app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
-/**@brief Function for handling Peer Manager events.
- *
- * @param[in] p_evt  Peer Manager event.
- */
-static void pm_evt_handler(pm_evt_t const *p_evt) {
-  ret_code_t err_code;
-
-  switch (p_evt->evt_id) {
-  case PM_EVT_BONDED_PEER_CONNECTED: {
-    NRF_LOG_INFO("Connected to a previously bonded device.\r\n");
-  } break;
-
-  case PM_EVT_CONN_SEC_SUCCEEDED: {
-    NRF_LOG_INFO("Connection secured: role: %d, conn_handle: 0x%x, procedure: %d.\r\n",
-        ble_conn_state_role(p_evt->conn_handle),
-        p_evt->conn_handle,
-        p_evt->params.conn_sec_succeeded.procedure);
-  } break;
-
-  case PM_EVT_CONN_SEC_FAILED: {
-    /* Often, when securing fails, it shouldn't be restarted, for security reasons.
-             * Other times, it can be restarted directly.
-             * Sometimes it can be restarted, but only after changing some Security Parameters.
-             * Sometimes, it cannot be restarted until the link is disconnected and reconnected.
-             * Sometimes it is impossible, to secure the link, or the peer device does not support it.
-             * How to handle this error is highly application dependent. */
-  } break;
-
-  case PM_EVT_CONN_SEC_CONFIG_REQ: {
-    // Reject pairing request from an already bonded peer.
-    pm_conn_sec_config_t conn_sec_config = {.allow_repairing = false};
-    pm_conn_sec_config_reply(p_evt->conn_handle, &conn_sec_config);
-  } break;
-
-  case PM_EVT_STORAGE_FULL: {
-    // Run garbage collection on the flash.
-    err_code = fds_gc();
-    if (err_code == FDS_ERR_BUSY || err_code == FDS_ERR_NO_SPACE_IN_QUEUES) {
-      // Retry.
-    } else {
-      APP_ERROR_CHECK(err_code);
-    }
-  } break;
-
-  case PM_EVT_PEERS_DELETE_SUCCEEDED: {
-    advertising_start(false);
-  } break;
-
-  case PM_EVT_LOCAL_DB_CACHE_APPLY_FAILED: {
-    // The local database has likely changed, send service changed indications.
-    pm_local_database_has_changed();
-  } break;
-
-  case PM_EVT_PEER_DATA_UPDATE_FAILED: {
-    // Assert.
-    APP_ERROR_CHECK(p_evt->params.peer_data_update_failed.error);
-  } break;
-
-  case PM_EVT_PEER_DELETE_FAILED: {
-    // Assert.
-    APP_ERROR_CHECK(p_evt->params.peer_delete_failed.error);
-  } break;
-
-  case PM_EVT_PEERS_DELETE_FAILED: {
-    // Assert.
-    APP_ERROR_CHECK(p_evt->params.peers_delete_failed_evt.error);
-  } break;
-
-  case PM_EVT_ERROR_UNEXPECTED: {
-    // Assert.
-    APP_ERROR_CHECK(p_evt->params.error_unexpected.error);
-  } break;
-
-  case PM_EVT_CONN_SEC_START:
-  case PM_EVT_PEER_DATA_UPDATE_SUCCEEDED:
-  case PM_EVT_PEER_DELETE_SUCCEEDED:
-  case PM_EVT_LOCAL_DB_CACHE_APPLIED:
-  case PM_EVT_SERVICE_CHANGED_IND_SENT:
-  case PM_EVT_SERVICE_CHANGED_IND_CONFIRMED:
-  default:
-    break;
-  }
-}
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
 static void m_sampling_timeout_handler(void *p_context) {
   UNUSED_PARAMETER(p_context);
@@ -283,13 +202,6 @@ static void timers_init(void) {
   err_code = app_timer_create(&m_sampling_timer_id, APP_TIMER_MODE_REPEATED, m_sampling_timeout_handler);
   APP_ERROR_CHECK(err_code);
 #endif
-  /* YOUR_JOB: Create any timers to be used by the application.
-                 Below is an example of how to create a timer.
-                 For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
-                 one.
-       ret_code_t err_code;
-       err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timer_timeout_handler);
-       APP_ERROR_CHECK(err_code); */
 }
 
 /**@brief Function for the GAP initialization.
@@ -575,17 +487,13 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
   /** The Connection state module has to be fed BLE events in order to function correctly
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
   ble_conn_state_on_ble_evt(p_ble_evt);
-  pm_on_ble_evt(p_ble_evt);
+//  pm_on_ble_evt(p_ble_evt);
   ble_conn_params_on_ble_evt(p_ble_evt);
   bsp_btn_ble_on_ble_evt(p_ble_evt);
   on_ble_evt(p_ble_evt);
   ble_advertising_on_ble_evt(p_ble_evt);
   nrf_ble_gatt_on_ble_evt(&m_gatt, p_ble_evt);
-  /*YOUR_JOB add calls to _on_ble_evt functions from each service your application is using
-       ble_xxs_on_ble_evt(&m_xxs, p_ble_evt);
-       ble_yys_on_ble_evt(&m_yys, p_ble_evt);
-     */
-  //TODOny:
+
   ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
 }
 
@@ -629,18 +537,35 @@ static void ble_stack_init(void) {
 
   // Configure number of custom UUIDS.
   memset(&ble_cfg, 0, sizeof(ble_cfg));
-  ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 0;
+  ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 1;
   err_code = sd_ble_cfg_set(BLE_COMMON_CFG_VS_UUID, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
 
   // Configure the maximum number of connections.
-  memset(&ble_cfg, 0, sizeof(ble_cfg));
+  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
   ble_cfg.gap_cfg.role_count_cfg.periph_role_count = BLE_GAP_ROLE_COUNT_PERIPH_DEFAULT;
-  ble_cfg.gap_cfg.role_count_cfg.central_role_count = 0;
+  ble_cfg.gap_cfg.role_count_cfg.central_role_count = 0; 
   ble_cfg.gap_cfg.role_count_cfg.central_sec_count = 0;
   err_code = sd_ble_cfg_set(BLE_GAP_CFG_ROLE_COUNT, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
+//TODO:
+///*
+  // Configure the max ATT MTU?
+  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
+  ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
+  ble_cfg.conn_cfg.params.gatt_conn_cfg.att_mtu = NRF_BLE_GATT_MAX_MTU_SIZE;
+  err_code = sd_ble_cfg_set(BLE_CONN_CFG_GATT, &ble_cfg, ram_start);
+  APP_ERROR_CHECK(err_code);
+///*
+  // Configure the maximum event length
+  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
+  ble_cfg.conn_cfg.conn_cfg_tag                     = CONN_CFG_TAG;
+  ble_cfg.conn_cfg.params.gap_conn_cfg.event_length = 320;
+  ble_cfg.conn_cfg.params.gap_conn_cfg.conn_count = BLE_GAP_CONN_COUNT_DEFAULT;
+  err_code = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &ble_cfg, ram_start);
+  APP_ERROR_CHECK(err_code);
 
+//*/
   // Enable BLE stack.
   err_code = softdevice_enable(&ram_start);
   APP_ERROR_CHECK(err_code);
@@ -654,46 +579,15 @@ static void ble_stack_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for the Peer Manager initialization.
- */
-static void peer_manager_init(void) {
-  ble_gap_sec_params_t sec_param;
-  ret_code_t err_code;
-
-  err_code = pm_init();
-  APP_ERROR_CHECK(err_code);
-
-  memset(&sec_param, 0, sizeof(ble_gap_sec_params_t));
-
-  // Security parameters to be used for all security procedures.
-  sec_param.bond = SEC_PARAM_BOND;
-  sec_param.mitm = SEC_PARAM_MITM;
-  sec_param.lesc = SEC_PARAM_LESC;
-  sec_param.keypress = SEC_PARAM_KEYPRESS;
-  sec_param.io_caps = SEC_PARAM_IO_CAPABILITIES;
-  sec_param.oob = SEC_PARAM_OOB;
-  sec_param.min_key_size = SEC_PARAM_MIN_KEY_SIZE;
-  sec_param.max_key_size = SEC_PARAM_MAX_KEY_SIZE;
-  sec_param.kdist_own.enc = 1;
-  sec_param.kdist_own.id = 1;
-  sec_param.kdist_peer.enc = 1;
-  sec_param.kdist_peer.id = 1;
-
-  err_code = pm_sec_params_set(&sec_param);
-  APP_ERROR_CHECK(err_code);
-
-  err_code = pm_register(pm_evt_handler);
-  APP_ERROR_CHECK(err_code);
-}
 
 /**@brief Clear bond information from persistent storage.
  */
 static void delete_bonds(void) {
-  ret_code_t err_code;
+  ret_code_t err_code = 0;
 
   NRF_LOG_INFO("Erase bonds!\r\n");
 
-  err_code = pm_peers_delete();
+//  err_code = pm_peers_delete();
   APP_ERROR_CHECK(err_code);
 }
 
@@ -789,16 +683,35 @@ static void power_manage(void) {
 
 /**@brief Function for starting advertising.
  */
-static void advertising_start(bool erase_bonds) {
-  if (erase_bonds == true) {
-    delete_bonds();
-    // Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED evetnt
-  } else {
-    ret_code_t err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
+//static void advertising_start(bool erase_bonds) {
+//  if (erase_bonds == true) {
+//    delete_bonds();
+//    // Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED evetnt
+//  } else {
+//    ret_code_t err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
+//
+//    APP_ERROR_CHECK(err_code);
+//  }
+//}
 
+///*
+static void advertising_start(void)
+{
+    ble_gap_adv_params_t const adv_params =
+    {
+        .type        = BLE_GAP_ADV_TYPE_ADV_IND,
+        .p_peer_addr = NULL,
+        .fp          = BLE_GAP_ADV_FP_ANY,
+        .interval    = 300,
+        .timeout     = 0,
+    };
+
+    NRF_LOG_INFO("Starting advertising.\r\n");
+
+    ret_code_t err_code = sd_ble_gap_adv_start(&adv_params, CONN_CFG_TAG);
     APP_ERROR_CHECK(err_code);
-  }
 }
+//*/
 
 #if defined(ADS1299)
 
@@ -850,7 +763,6 @@ int main(void) {
   // Initialize.
   log_init();
   timers_init();
-  //buttons_leds_init(&erase_bonds);
   ble_stack_init();
 #if defined(ADS1299)
   ads1299_gpio_init();
@@ -860,7 +772,6 @@ int main(void) {
   advertising_init();
   services_init();
   conn_params_init();
-  peer_manager_init();
 #if defined(ADS1299)
   ads_spi_init();
   nrf_delay_ms(5);
@@ -876,7 +787,8 @@ int main(void) {
 #endif
   // Start execution.
   application_timers_start();
-  advertising_start(erase_bonds);
+//  advertising_start(erase_bonds);
+  advertising_start();
 #if defined(BOARD_EXG_V3)
   nrf_gpio_pin_clear(LED_2); // Green
   nrf_gpio_pin_set(LED_1); //Blue
@@ -884,7 +796,6 @@ int main(void) {
   uint16_t samples = 0;
   int32_t eeg1 = 0x0000;
   int32_t eeg2 = 0x0000;
-
   int32_t eeg3 = 0x0000;
   int32_t eeg4 = 0x0000;
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
@@ -896,9 +807,7 @@ int main(void) {
         m_drdy = false;
         samples += 1;
         get_eeg_voltage_sample(&eeg1);        //Acquire Data Samples
-//      Put 32-bit data samples into buffer
-//        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
-//        ble_eeg_update_1ch(&m_eeg, &eeg1);
+//        ble_eeg_update_1ch(&m_eeg, &eeg1);//Put 32-bit data samples into buffer
       }
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
         if (m_timer) {

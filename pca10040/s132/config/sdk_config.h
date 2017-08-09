@@ -36,7 +36,7 @@
 #if  NRF_BLE_GATT_ENABLED
 // <o> NRF_BLE_GATT_MAX_MTU_SIZE - Static maximum MTU size that is passed to the @ref sd_ble_enable function. 
 #ifndef NRF_BLE_GATT_MAX_MTU_SIZE
-#define NRF_BLE_GATT_MAX_MTU_SIZE 23
+#define NRF_BLE_GATT_MAX_MTU_SIZE 247//23
 #endif
 
 #endif //NRF_BLE_GATT_ENABLED
@@ -53,7 +53,7 @@
  
 
 #ifndef PEER_MANAGER_ENABLED
-#define PEER_MANAGER_ENABLED 1
+#define PEER_MANAGER_ENABLED 0
 #endif
 
 // </h> 

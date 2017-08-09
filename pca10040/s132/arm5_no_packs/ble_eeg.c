@@ -335,8 +335,8 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
   ble_uuid_t service_uuid;
   ble_uuid128_t base_uuid = BMS_UUID_BASE;
   service_uuid.uuid = BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE;
-  //err_code = sd_ble_uuid_vs_add(&base_uuid, &service_uuid.type);
-  //APP_ERROR_CHECK(err_code);
+//  err_code = sd_ble_uuid_vs_add(&base_uuid, &service_uuid.type);
+//  APP_ERROR_CHECK(err_code);
 
   p_eeg->conn_handle = BLE_CONN_HANDLE_INVALID;
   
