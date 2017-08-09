@@ -1,5 +1,3 @@
-
-
 #ifndef SDK_CONFIG_H
 #define SDK_CONFIG_H
 // <<< Use Configuration Wizard in Context Menu >>>\n
@@ -3714,12 +3712,23 @@
 #ifndef NRF_LOG_ENABLED
 #define NRF_LOG_ENABLED 1
 #endif
-#if  NRF_LOG_ENABLED
+#if NRF_LOG_ENABLED
 // <e> NRF_LOG_USES_COLORS - If enabled then ANSI escape code for colors is prefixed to every string
 //==========================================================
 #ifndef NRF_LOG_USES_COLORS
 #define NRF_LOG_USES_COLORS 0
 #endif
+//Additional Config Stuff: (Musa Mahmood; 08-09-2017)
+
+#ifndef LOG_HIGH_DETAIL
+#define LOG_HIGH_DETAIL 0
+#endif
+
+#ifndef LOG_LOW_DETAIL
+#define LOG_LOW_DETAIL 1
+#endif
+
+
 #if  NRF_LOG_USES_COLORS
 // <o> NRF_LOG_COLOR_DEFAULT  - ANSI escape code prefix.
  

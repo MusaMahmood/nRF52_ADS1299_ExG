@@ -64,6 +64,13 @@ extern "C" {
 #define ADS1299_RESET_PIN 12
 #define ADS1299_PWDN_PIN 13
 #define ADS1299_SPI_MOSI_PIN 14 //MASTER (nRF) OUT; SLAVE (ADS) DIN
+#elif defined (BOARD_EXG_V3)
+#define ADS1299_SPI_MOSI_PIN 16 //MASTER (nRF) OUT; SLAVE (ADS) DIN
+#define ADS1299_PWDN_RST_PIN 15
+#define ADS1299_SPI_CS_PIN 14
+#define ADS1299_SPI_SCLK_PIN 13
+#define ADS1299_SPI_MISO_PIN 12 //MASTER (nRF) IN ; SLAVE (ADS) DOUT
+#define ADS1299_DRDY_PIN 11
 #endif
 
 #define ADS1299_NUM_REGS 24
@@ -183,10 +190,6 @@ typedef int16_t body_voltage_t;
 **************************************************************************************************************************************************/
 void ads_spi_init(void);
 
-void init_buf(uint8_t *const p_tx_buffer,
-    uint8_t *const p_rx_buffer,
-    const uint16_t len);
-
 /**
  *	\brief Initialize the ADS1299-x.
  *
@@ -214,5 +217,6 @@ void ads1299_start_rdatac(void);
 void ads1299_check_id(void);
 
 void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_t *eeg4);
+
 void get_eeg_voltage_sample(int32_t *eeg1);
 #endif // ADS1299_H__

@@ -490,14 +490,12 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
   case BLE_GAP_EVT_DISCONNECTED:
     NRF_LOG_INFO("Disconnected.\r\n");
     m_connected = false;
-//err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-//APP_ERROR_CHECK(err_code);
 #if defined(ADS1299)
     ads1299_standby();
 #endif
-#if defined(BOARD_PCA10040)
-    nrf_gpio_pin_set(LED_4);
-    nrf_gpio_pin_clear(LED_3);
+#if defined (BOARD_EXG_V3)
+    nrf_gpio_pin_set(LED_1);
+    nrf_gpio_pin_clear(LED_2);
 #endif
     break; // BLE_GAP_EVT_DISCONNECTED
 
@@ -506,14 +504,12 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
 #if defined(ADS1299)
     ads1299_wake();
 #endif
-    NRF_LOG_INFO("Connected.\r\n");
-    //err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
-    // APP_ERROR_CHECK(err_code);
-    m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-#if defined(BOARD_PCA10040)
-    nrf_gpio_pin_set(LED_3);
-    nrf_gpio_pin_clear(LED_4);
+#if defined (BOARD_EXG_V3)
+    nrf_gpio_pin_set(LED_1);
+    nrf_gpio_pin_clear(LED_2);
 #endif
+    NRF_LOG_INFO("Connected.\r\n");
+    m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
     break; // BLE_GAP_EVT_CONNECTED
 
   case BLE_GATTC_EVT_TIMEOUT:
@@ -820,9 +816,13 @@ static void ads1299_gpio_init(void) {
   nrf_gpio_cfg_output(LED_4);
 #endif
 
-#if defined(BOARD_NRF_BREAKOUT) | defined(BOARD_PCA10028) | defined(BOARD_PCA10040)
+#if defined(BOARD_NRF_BREAKOUT) | defined(BOARD_PCA10028) | defined(BOARD_PCA10040) | defined(BOARD_EXG_V3)
   nrf_gpio_pin_dir_set(ADS1299_DRDY_PIN, NRF_GPIO_PIN_DIR_INPUT); //sets 'direction' = input/output
   nrf_gpio_pin_dir_set(ADS1299_PWDN_RST_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
+#endif
+#if defined (BOARD_EXG_V3)
+  nrf_gpio_cfg_output(LED_1);
+  nrf_gpio_cfg_output(LED_2);
 #endif
   uint32_t err_code;
   if (!nrf_drv_gpiote_is_init()) {
@@ -879,9 +879,9 @@ int main(void) {
   // Start execution.
   application_timers_start();
   advertising_start(erase_bonds);
-#if defined(BOARD_PCA10040)
-  nrf_gpio_pin_clear(LED_3);
-  nrf_gpio_pin_set(LED_4);
+#if defined(BOARD_EXG_V3)
+  nrf_gpio_pin_clear(LED_2); // Green
+  nrf_gpio_pin_set(LED_1); //Blue
 #endif
   uint16_t samples = 0;
   int32_t eeg1 = 0x0000;
@@ -890,36 +890,24 @@ int main(void) {
   int32_t eeg3 = 0x0000;
   int32_t eeg4 = 0x0000;
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
-#if TIMER_ENABLED == 1
-  //Initialize
-  nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
-  err_code = nrf_drv_timer_init(&TIMER_SAMPLERATE, &timer_cfg, timer_led_event_handler);
-  APP_ERROR_CHECK(err_code);
-
-  uint32_t time_ticks = nrf_drv_timer_ms_to_ticks(&TIMER_SAMPLERATE, time_ms);
-
-  nrf_drv_timer_extended_compare(
-      &TIMER_SAMPLERATE, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
-
-  nrf_drv_timer_enable(&TIMER_SAMPLERATE);
-#endif
   // Enter main loop.
   for (;;) {
     if (NRF_LOG_PROCESS() == false) {
       power_manage();
       if (m_drdy) {
         m_drdy = false;
-        //Acquire Data Samples
         samples += 1;
-        get_eeg_voltage_sample(&eeg1);
-        //        //Send 32-bit data samples to be organized into buffer
-        //        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
+        get_eeg_voltage_sample(&eeg1);        //Acquire Data Samples
+//      Put 32-bit data samples into buffer
+//        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
 //        ble_eeg_update_1ch(&m_eeg, &eeg1);
       }
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
         if (m_timer) {
           m_timer = false;
-          NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n\n", samples);
+#if LOG_LOW_DETAIL == 1
+          NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
+#endif
           samples = 0;
         }
 #endif
