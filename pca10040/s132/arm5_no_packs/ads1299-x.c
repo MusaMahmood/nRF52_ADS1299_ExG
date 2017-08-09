@@ -172,13 +172,13 @@ void ads1299_start_rdatac(void) {
 void ads1299_check_id(void) {
   uint8_t device_id_reg_value;
   uint8_t tx_data_spi[3];
-  uint8_t rx_data_spi[7];
-  memset(rx_data_spi, 0, 7);
-  tx_data_spi[0] = 0x20; //Request Device ID
-  tx_data_spi[1] = 0x01; //Intend to read 1 byte
+  uint8_t rx_data_spi[4];
+  memset(rx_data_spi, 0, 4);
+  tx_data_spi[0] = 0x20; // First command byte = 001r rrrr (r rrrr = register start address)
+  tx_data_spi[1] = 0x00; // Intend to read 1 byte: (Bytes to read)-1 = 0
   tx_data_spi[2] = 0x00; //This will be replaced by Reg Data
   spi_xfer_done = false;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 7)); 
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 4)); 
 //  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_data_spi, 3, rx_data_spi, 3)); 
   while (!spi_xfer_done) { __WFE(); }
   //NOTE: CHANGES FROM [2] to [3] for EASY DMA
@@ -196,8 +196,8 @@ void ads1299_check_id(void) {
   } else {
     NRF_LOG_INFO("********SPI I/O Error, Device Not Detected! *********** \r\n");
     NRF_LOG_INFO("SPI Transfer Dump: \r\n");
-    NRF_LOG_INFO("ID[b0->2]: [0x%x | 0x%x | 0x%x] \r\n", rx_data_spi[0], rx_data_spi[1], rx_data_spi[2]);
-    NRF_LOG_INFO("ID[b3->6]: [0x%x | 0x%x | 0x%x | 0x%x] \r\n", rx_data_spi[3], rx_data_spi[4], rx_data_spi[5], rx_data_spi[6]);
+    NRF_LOG_INFO("ID[b0->3]: [0x%x | 0x%x | 0x%x] \r\n", rx_data_spi[0], rx_data_spi[1], rx_data_spi[2], rx_data_spi[3]);
+//    NRF_LOG_INFO("ID[b3->6]: [0x%x | 0x%x | 0x%x | 0x%x] \r\n", rx_data_spi[3], rx_data_spi[4], rx_data_spi[5], rx_data_spi[6]);
   }
   if (is_ads_1299) {
     NRF_LOG_INFO("Device Name: ADS1299 \r\n");
@@ -265,16 +265,16 @@ void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_
   //NRF_LOG_INFO("DATA:[0x%x 0x%x]\r\n",*eeg1,*eeg2);
   //NRF_LOG_INFO("DATA:[0x%x 0x%x 0x%x 0x%x]\r\n",*eeg1,*eeg2,*eeg3,*eeg4);
 }
-
-//void get_eeg_voltage_sample(int32_t *eeg1) {
-//  uint8_t tx_rx_data[6];
-//  memset(tx_rx_data,0,6);
-//  spi_xfer_done = false;
-//  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
-//  while (!spi_xfer_done) { __WFE(); }
-//  *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
-//      NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
-//}
+/*
+void get_eeg_voltage_sample(int32_t *eeg1) {
+  uint8_t tx_rx_data[6];
+  memset(tx_rx_data,0,6);
+  spi_xfer_done = false;
+  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
+  while (!spi_xfer_done) { __WFE(); }
+  *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
+//      NRF_LOG_INFO("[0x[%x|%x|%x|%x|%x|%x]\r\n",tx_rx_data[0],tx_rx_data[1],tx_rx_data[2],tx_rx_data[3],tx_rx_data[4],tx_rx_data[5]);
+}*/
 
 void get_eeg_voltage_sample(int32_t *eeg1) {
   uint8_t tx_rx_data[6]; uint8_t cnt = 0;
@@ -283,17 +283,12 @@ void get_eeg_voltage_sample(int32_t *eeg1) {
   APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
   while (!spi_xfer_done) { __WFE(); }
   do {
-    if (tx_rx_data[0] == 0xC0) {
+    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
         *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
+//        NRF_LOG_INFO("[%x] | [%x%x%x] \r\n",*eeg1,tx_rx_data[3], tx_rx_data[4],tx_rx_data[5]);
       break;
     }
     cnt++;
-    nrf_delay_us(1);
   } while (cnt < 255);
-//        NRF_LOG_INFO("[0x%x%x%x]\r\n",tx_rx_data[3],tx_rx_data[4],tx_rx_data[5]);
-        *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
-        //  NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
 }
-
-
 
