@@ -27,6 +27,7 @@
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;Board Support"/>
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;Internal Files"/>
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;nRF_BLE"/>
+  <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;nRF_Drivers"/>
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;nRF_Libraries"/>
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;nRF_Segger_RTT"/>
   <ProjectSessionItem path="ble_app_template_pca10040_s132;ble_app_template_pca10040_s132;nRF_SoftDevice"/>
@@ -61,16 +62,18 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="488" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../main.c" debugPath="../../../main.c" selected="1" top="464" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="578" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/ble/ble_advertising/ble_advertising.c" debugPath="../../../../../../components/ble/ble_advertising/ble_advertising.c" selected="0" top="552" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="512" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/fstorage/fstorage.c" debugPath="../../../../../../components/libraries/fstorage/fstorage.c" selected="0" top="479" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1426" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/softdevice/s132/headers/ble_gap.h" debugPath="../../../../../../components/softdevice/s132/headers/ble_gap.h" selected="0" top="1402" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="227" useTextEdit="1" useBinaryEdit="0" left="0" path="ads1299-x.c" debugPath="ads1299-x.c" selected="0" top="213" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="3" y="929" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../main.c" debugPath="../../../main.c" selected="1" top="890" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="81" y="275" useTextEdit="1" useBinaryEdit="0" left="0" path="ads1299-x.c" debugPath="ads1299-x.c" selected="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="455" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/bsp/bsp.c" debugPath="../../../../../../components/libraries/bsp/bsp.c" selected="0" top="425" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="337" useTextEdit="1" useBinaryEdit="0" left="0" path="ble_eeg.c" debugPath="ble_eeg.c" selected="0" top="317" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="41" useTextEdit="1" useBinaryEdit="0" left="0" path="ble_eeg.h" debugPath="ble_eeg.h" selected="0" top="28" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="49" useTextEdit="1" useBinaryEdit="0" left="0" path="ads1299-x.h" debugPath="ads1299-x.h" selected="0" top="28" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="2246" useTextEdit="1" useBinaryEdit="0" left="0" path="../config/sdk_config.h" debugPath="../config/sdk_config.h" selected="0" top="2229" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="464" useTextEdit="1" useBinaryEdit="0" left="0" path="ble_eeg.c" debugPath="ble_eeg.c" selected="0" top="435" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="132" useTextEdit="1" useBinaryEdit="0" left="0" path="ble_eeg.h" debugPath="ble_eeg.h" selected="0" top="112" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="143" useTextEdit="1" useBinaryEdit="0" left="0" path="ads1299-x.h" debugPath="ads1299-x.h" selected="0" top="129" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="490" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/softdevice/s132/headers/ble.h" debugPath="../../../../../../components/softdevice/s132/headers/ble.h" selected="0" top="463" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="955" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer.c" debugPath="../../../../../../components/libraries/timer/app_timer.c" selected="0" top="939" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="113" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/timer/app_timer.h" debugPath="../../../../../../components/libraries/timer/app_timer.h" selected="0" top="86" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="2153" useTextEdit="1" useBinaryEdit="0" left="0" path="../config/sdk_config.h" debugPath="../config/sdk_config.h" selected="0" top="2127" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="371" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../../../AppData/Local/SEGGER/SEGGER Embedded Studio/v3/packages/CMSIS_4/CMSIS/Include/cmsis_gcc.h" debugPath="../../../../../../../../AppData/Local/SEGGER/SEGGER Embedded Studio/v3/packages/CMSIS_4/CMSIS/Include/cmsis_gcc.h" selected="0" top="369" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="111" useTextEdit="1" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/log/src/nrf_log_internal.h" debugPath="../../../../../../components/libraries/log/src/nrf_log_internal.h" selected="0" top="98" codecName="Default"/>
  </Files>
- <ARMCrossStudioWindow activeProject="ble_app_template_pca10040_s132" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="nrf52832_xxaa" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/Musa Mahmood/Google Drive/nRF5_SDK_13.1.0/components/toolchain/embedded_studio" debugSearchPath="" autoConnectCapabilities="1132"/>
+ <ARMCrossStudioWindow activeProject="ble_app_template_pca10040_s132" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="nrf52832_xxaa" debugSearchFileMap="" fileDialogInitialDirectory="C:/Users/mmahmood31/Google Drive/nRF5_SDK_13.1.0/components/drivers_nrf/timer" debugSearchPath="" autoConnectCapabilities="1132"/>
 </session>

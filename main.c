@@ -908,11 +908,9 @@ int main(void) {
     if (NRF_LOG_PROCESS() == false) {
       power_manage();
       if (m_drdy) {
-        //NRF_LOG_INFO("MDRDY TRIGGERED \r\n");
         m_drdy = false;
         //Acquire Data Samples
         samples += 1;
-//        get_eeg_voltage_samples(&eeg1, &eeg2, &eeg3, &eeg4);
         get_eeg_voltage_sample(&eeg1);
         //        //Send 32-bit data samples to be organized into buffer
         //        ble_eeg_update_2ch(&m_eeg, &eeg1, &eeg2);
@@ -928,40 +926,7 @@ int main(void) {
     }
   }
 }
-//NOTE: ORIG BELOW
-/*
-int main(void)
-{
-    bool erase_bonds;
 
-    // Initialize.
-    log_init();
-    timers_init();
-    buttons_leds_init(&erase_bonds);
-    ble_stack_init();
-    gap_params_init();
-    gatt_init();
-    advertising_init();
-    services_init();
-    conn_params_init();
-    peer_manager_init();
-
-    // Start execution.
-    NRF_LOG_INFO("Template example started.\r\n");
-    application_timers_start();
-
-    advertising_start(erase_bonds);
-
-    // Enter main loop.
-    for (;;)
-    {
-        if (NRF_LOG_PROCESS() == false)
-        {
-            power_manage();
-        }
-    }
-}
-*/
 /**
  * @}
  */
