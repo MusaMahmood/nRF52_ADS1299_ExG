@@ -65,7 +65,7 @@
 #include "ble_hci.h"
 #include "ble_srv_common.h"
 #include "boards.h"
-#include "bsp_btn_ble.h"
+//#include "bsp_btn_ble.h"
 #include "fds.h"
 #include "fstorage.h"
 #include "nordic_common.h"
@@ -113,11 +113,11 @@ static bool m_timer = false;
 #define APP_ADV_TIMEOUT_IN_SECONDS 180 /**< The advertising timeout in units of seconds. */
 
 #define MIN_CONN_INTERVAL MSEC_TO_UNITS(7.5, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(500, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
-#define SLAVE_LATENCY 0                                   /**< Slave latency. */
-#define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)  /**< Connection supervisory timeout (4 seconds). */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(20, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
+#define SLAVE_LATENCY 0                                    /**< Slave latency. */
+#define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)   /**< Connection supervisory timeout (4 seconds). */
 
-#define CONN_CFG_TAG                    1                                               /**< A tag that refers to the BLE stack configuration we set with @ref sd_ble_cfg_set. Default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
+#define CONN_CFG_TAG 1 /**< A tag that refers to the BLE stack configuration we set with @ref sd_ble_cfg_set. Default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 
 #define FIRST_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(5000) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(30000) /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
@@ -148,24 +148,8 @@ static ble_uuid_t m_adv_uuids[] =
     {
         {BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE, BLE_UUID_TYPE_BLE},
         {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
-#if TIMER_ENABLED == 1
-/**
- * @brief Handler for timer events.
- */
-void timer_led_event_handler(nrf_timer_event_t event_type, void *p_context) {
 
-  switch (event_type) {
-  case NRF_TIMER_EVENT_COMPARE0:
-    m_timer = true;
-    break;
-
-  default:
-    //Do nothing.
-    break;
-  }
-}
-#endif
-//static void advertising_start(bool erase_bonds);
+static void advertising_start(void);
 
 /**@brief Callback function for asserts in the SoftDevice.
  *
@@ -182,7 +166,7 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
   app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
-#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
 static void m_sampling_timeout_handler(void *p_context) {
   UNUSED_PARAMETER(p_context);
   m_timer = true;
@@ -272,7 +256,7 @@ static void on_yys_evt(ble_yy_service_t     * p_yy_service,
 /**@brief Function for initializing services that will be used by the application.
  */
 static void services_init(void) {
-  //TODONT:
+  //TODO:
   ble_eeg_service_init(&m_eeg);
   /**@Device Information Service:*/
   uint32_t err_code;
@@ -342,9 +326,9 @@ static void application_timers_start(void) {
        ret_code_t err_code;
        err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
        APP_ERROR_CHECK(err_code); */
-    ret_code_t err_code;
-    err_code = app_timer_start(m_sampling_timer_id, TICKS_SAMPLING_INTERVAL, NULL);
-    APP_ERROR_CHECK(err_code);
+  ret_code_t err_code;
+  err_code = app_timer_start(m_sampling_timer_id, TICKS_SAMPLING_INTERVAL, NULL);
+  APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for putting the chip into sleep mode.
@@ -354,12 +338,12 @@ static void application_timers_start(void) {
 static void sleep_mode_enter(void) {
   ret_code_t err_code;
 
-  err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-  APP_ERROR_CHECK(err_code);
+  //  err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+  //  APP_ERROR_CHECK(err_code);
 
   // Prepare wakeup buttons.
-  err_code = bsp_btn_ble_sleep_mode_prepare();
-  APP_ERROR_CHECK(err_code);
+  //  err_code = bsp_btn_ble_sleep_mode_prepare();
+  //  APP_ERROR_CHECK(err_code);
 
   // Go to system-off mode (this function will not return; wakeup will cause a reset).
   err_code = sd_power_system_off();
@@ -378,7 +362,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt) {
   switch (ble_adv_evt) {
   case BLE_ADV_EVT_FAST:
     NRF_LOG_INFO("Fast advertising.\r\n");
-    err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+    //    err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
     APP_ERROR_CHECK(err_code);
     break;
 
@@ -406,17 +390,18 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     ads1299_standby();
 #endif
 #if defined(BOARD_EXG_V3)
-  nrf_gpio_pin_clear(LED_2); // Green
-  nrf_gpio_pin_set(LED_1); //Blue
+    nrf_gpio_pin_clear(LED_2); // Green
+    nrf_gpio_pin_set(LED_1);   //Blue
 #endif
+    advertising_start();
     break; // BLE_GAP_EVT_DISCONNECTED
 
   case BLE_GAP_EVT_CONNECTED:
-  m_connected = true;
+    m_connected = true;
 #if defined(ADS1299)
     ads1299_wake();
 #endif
-#if defined (BOARD_EXG_V3)
+#if defined(BOARD_EXG_V3)
     nrf_gpio_pin_set(LED_2);
     nrf_gpio_pin_clear(LED_1);
 #endif
@@ -428,7 +413,7 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     // Disconnect on GATT Client timeout event.
     NRF_LOG_DEBUG("GATT Client Timeout.\r\n");
     err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
-    BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     m_connected = false;
     APP_ERROR_CHECK(err_code);
     break; // BLE_GATTC_EVT_TIMEOUT
@@ -437,7 +422,7 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     // Disconnect on GATT Server timeout event.
     NRF_LOG_DEBUG("GATT Server Timeout.\r\n");
     err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
-    BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     APP_ERROR_CHECK(err_code);
     m_connected = false;
     break; // BLE_GATTS_EVT_TIMEOUT
@@ -487,9 +472,9 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
   /** The Connection state module has to be fed BLE events in order to function correctly
      * Remember to call ble_conn_state_on_ble_evt before calling any ble_conns_state_* functions. */
   ble_conn_state_on_ble_evt(p_ble_evt);
-//  pm_on_ble_evt(p_ble_evt);
+  //  pm_on_ble_evt(p_ble_evt);
   ble_conn_params_on_ble_evt(p_ble_evt);
-  bsp_btn_ble_on_ble_evt(p_ble_evt);
+  //  bsp_btn_ble_on_ble_evt(p_ble_evt);
   on_ble_evt(p_ble_evt);
   ble_advertising_on_ble_evt(p_ble_evt);
   nrf_ble_gatt_on_ble_evt(&m_gatt, p_ble_evt);
@@ -543,29 +528,29 @@ static void ble_stack_init(void) {
 
   // Configure the maximum number of connections.
   memset(&ble_cfg, 0x00, sizeof(ble_cfg));
-  ble_cfg.gap_cfg.role_count_cfg.periph_role_count = BLE_GAP_ROLE_COUNT_PERIPH_DEFAULT;
-  ble_cfg.gap_cfg.role_count_cfg.central_role_count = 0; 
+  ble_cfg.gap_cfg.role_count_cfg.periph_role_count = BLE_GAP_ROLE_COUNT_PERIPH_DEFAULT; //is 1
+  ble_cfg.gap_cfg.role_count_cfg.central_role_count = 0;
   ble_cfg.gap_cfg.role_count_cfg.central_sec_count = 0;
   err_code = sd_ble_cfg_set(BLE_GAP_CFG_ROLE_COUNT, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
-//TODO:
-///*
+  //TODO:
+  ///*
   // Configure the max ATT MTU?
   memset(&ble_cfg, 0x00, sizeof(ble_cfg));
   ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
   ble_cfg.conn_cfg.params.gatt_conn_cfg.att_mtu = NRF_BLE_GATT_MAX_MTU_SIZE;
   err_code = sd_ble_cfg_set(BLE_CONN_CFG_GATT, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
-///*
+  ///*
   // Configure the maximum event length
   memset(&ble_cfg, 0x00, sizeof(ble_cfg));
-  ble_cfg.conn_cfg.conn_cfg_tag                     = CONN_CFG_TAG;
+  ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
   ble_cfg.conn_cfg.params.gap_conn_cfg.event_length = 320;
   ble_cfg.conn_cfg.params.gap_conn_cfg.conn_count = BLE_GAP_CONN_COUNT_DEFAULT;
   err_code = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
 
-//*/
+  //*/
   // Enable BLE stack.
   err_code = softdevice_enable(&ram_start);
   APP_ERROR_CHECK(err_code);
@@ -579,7 +564,6 @@ static void ble_stack_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-
 /**@brief Clear bond information from persistent storage.
  */
 static void delete_bonds(void) {
@@ -587,14 +571,14 @@ static void delete_bonds(void) {
 
   NRF_LOG_INFO("Erase bonds!\r\n");
 
-//  err_code = pm_peers_delete();
+  //  err_code = pm_peers_delete();
   APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for handling events from the BSP module.
  *
  * @param[in]   event   Event generated when button is pressed.
- */
+ 
 static void bsp_event_handler(bsp_event_t event) {
   ret_code_t err_code;
 
@@ -623,7 +607,7 @@ static void bsp_event_handler(bsp_event_t event) {
   default:
     break;
   }
-}
+}*/
 
 /**@brief Function for initializing the Advertising functionality.
  */
@@ -653,7 +637,7 @@ static void advertising_init(void) {
 /**@brief Function for initializing buttons and leds.
  *
  * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
- */
+ 
 static void buttons_leds_init(bool *p_erase_bonds) {
   ret_code_t err_code;
   bsp_event_t startup_event;
@@ -665,7 +649,7 @@ static void buttons_leds_init(bool *p_erase_bonds) {
   APP_ERROR_CHECK(err_code);
 
   *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
-}
+}*/
 
 /**@brief Function for initializing the nrf log module.
  */
@@ -681,35 +665,21 @@ static void power_manage(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for starting advertising.
- */
-//static void advertising_start(bool erase_bonds) {
-//  if (erase_bonds == true) {
-//    delete_bonds();
-//    // Advertising is started by PM_EVT_PEERS_DELETED_SUCEEDED evetnt
-//  } else {
-//    ret_code_t err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
-//
-//    APP_ERROR_CHECK(err_code);
-//  }
-//}
-
 ///*
-static void advertising_start(void)
-{
-    ble_gap_adv_params_t const adv_params =
-    {
-        .type        = BLE_GAP_ADV_TYPE_ADV_IND,
-        .p_peer_addr = NULL,
-        .fp          = BLE_GAP_ADV_FP_ANY,
-        .interval    = 300,
-        .timeout     = 0,
-    };
+static void advertising_start(void) {
+  ble_gap_adv_params_t const adv_params =
+      {
+          .type = BLE_GAP_ADV_TYPE_ADV_IND,
+          .p_peer_addr = NULL,
+          .fp = BLE_GAP_ADV_FP_ANY,
+          .interval = 300,
+          .timeout = 0,
+      };
 
-    NRF_LOG_INFO("Starting advertising.\r\n");
+  NRF_LOG_INFO("Starting advertising.\r\n");
 
-    ret_code_t err_code = sd_ble_gap_adv_start(&adv_params, CONN_CFG_TAG);
-    APP_ERROR_CHECK(err_code);
+  ret_code_t err_code = sd_ble_gap_adv_start(&adv_params, CONN_CFG_TAG);
+  APP_ERROR_CHECK(err_code);
 }
 //*/
 
@@ -733,7 +703,7 @@ static void ads1299_gpio_init(void) {
   nrf_gpio_pin_dir_set(ADS1299_DRDY_PIN, NRF_GPIO_PIN_DIR_INPUT); //sets 'direction' = input/output
   nrf_gpio_pin_dir_set(ADS1299_PWDN_RST_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
 #endif
-#if defined (BOARD_EXG_V3)
+#if defined(BOARD_EXG_V3)
   nrf_gpio_cfg_output(LED_1);
   nrf_gpio_cfg_output(LED_2);
 #endif
@@ -787,17 +757,14 @@ int main(void) {
 #endif
   // Start execution.
   application_timers_start();
-//  advertising_start(erase_bonds);
   advertising_start();
 #if defined(BOARD_EXG_V3)
   nrf_gpio_pin_clear(LED_2); // Green
-  nrf_gpio_pin_set(LED_1); //Blue
+  nrf_gpio_pin_set(LED_1);   //Blue
 #endif
   uint16_t samples = 0;
   int32_t eeg1 = 0x0000;
-  int32_t eeg2 = 0x0000;
-  int32_t eeg3 = 0x0000;
-  int32_t eeg4 = 0x0000;
+  uint8_t eegData[3] = {0x00, 0x00, 0x00};
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
   // Enter main loop.
   for (;;) {
@@ -806,17 +773,17 @@ int main(void) {
       if (m_drdy) {
         m_drdy = false;
         samples += 1;
-        get_eeg_voltage_sample(&eeg1);        //Acquire Data Samples
-//        ble_eeg_update_1ch(&m_eeg, &eeg1);//Put 32-bit data samples into buffer
+        get_eeg_voltage_sample(&eeg1); //Acquire Data Samples
+        ble_eeg_update_1ch(&m_eeg, &eeg1);//Put 32-bit data samples into buffer
       }
-#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING==1
-        if (m_timer) {
-          m_timer = false;
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
+      if (m_timer) {
+        m_timer = false;
 #if LOG_LOW_DETAIL == 1
-          NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
+        NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
 #endif
-          samples = 0;
-        }
+        samples = 0;
+      }
 #endif
     }
   }

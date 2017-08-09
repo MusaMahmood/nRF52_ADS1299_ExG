@@ -216,7 +216,7 @@ void ads1299_start_rdatac(void);
 
 void ads1299_check_id(void);
 
-void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_t *eeg4);
-
 void get_eeg_voltage_sample(int32_t *eeg1);
+
+void get_eeg_voltage_array(uint8_t *eeg_array);
 #endif // ADS1299_H__
