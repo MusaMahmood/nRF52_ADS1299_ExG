@@ -493,9 +493,9 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
 #if defined(ADS1299)
     ads1299_standby();
 #endif
-#if defined (BOARD_EXG_V3)
-    nrf_gpio_pin_set(LED_1);
-    nrf_gpio_pin_clear(LED_2);
+#if defined(BOARD_EXG_V3)
+  nrf_gpio_pin_clear(LED_2); // Green
+  nrf_gpio_pin_set(LED_1); //Blue
 #endif
     break; // BLE_GAP_EVT_DISCONNECTED
 
@@ -505,8 +505,8 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     ads1299_wake();
 #endif
 #if defined (BOARD_EXG_V3)
-    nrf_gpio_pin_set(LED_1);
-    nrf_gpio_pin_clear(LED_2);
+    nrf_gpio_pin_set(LED_2);
+    nrf_gpio_pin_clear(LED_1);
 #endif
     NRF_LOG_INFO("Connected.\r\n");
     m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -873,8 +873,6 @@ int main(void) {
   ads1299_start_rdatac();
   ads1299_standby();
   nrf_delay_ms(10);
-//  nrf_delay_ms(500);
-//  ads1299_wake();
 #endif
   // Start execution.
   application_timers_start();
