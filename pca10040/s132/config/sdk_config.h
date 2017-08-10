@@ -3071,7 +3071,7 @@
 #endif
 #if  APP_TIMER_ENABLED
 
-#define APP_TIMER_SAMPLING 1
+#define APP_TIMER_SAMPLING 0
 // <o> APP_TIMER_CONFIG_RTC_FREQUENCY  - Configure RTC prescaler.
  
 // <0=> 32768 Hz 
@@ -3710,7 +3710,7 @@
 // <e> NRF_LOG_ENABLED - nrf_log - Logging
 //==========================================================
 #ifndef NRF_LOG_ENABLED
-#define NRF_LOG_ENABLED 1
+#define NRF_LOG_ENABLED 0
 #endif
 #if NRF_LOG_ENABLED
 // <e> NRF_LOG_USES_COLORS - If enabled then ANSI escape code for colors is prefixed to every string

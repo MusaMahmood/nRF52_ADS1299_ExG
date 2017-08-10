@@ -56,7 +56,9 @@
 #include <string.h>
 
 #include "app_error.h"
+#if defined(APP_TIMER_SAMPLING)
 #include "app_timer.h"
+#endif
 #include "ble.h"
 #include "ble_advdata.h"
 #include "ble_advertising.h"
@@ -106,14 +108,14 @@ static bool m_timer = false;
 #endif
 #define APP_FEATURE_NOT_SUPPORTED BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2 /**< Reply when unsupported features are requested. */
 
-#define DEVICE_NAME "EEG 250Hz"         //"nRF52_EEG"         /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME "ExG 10kHz"         //"nRF52_EEG"         /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME "Potato Labs" /**< Manufacturer. Will be passed to Device Information Service. */
 //#define MANUFACTURER_NAME "YeoLabs"   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL 300           /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS 180 /**< The advertising timeout in units of seconds. */
 
 #define MIN_CONN_INTERVAL MSEC_TO_UNITS(7.5, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(20, UNIT_1_25_MS) /**< Maximum acceptable connection interval (0.2 second). */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(25, UNIT_1_25_MS)  /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY 0                                    /**< Slave latency. */
 #define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)   /**< Connection supervisory timeout (4 seconds). */
 
@@ -322,13 +324,16 @@ static void conn_params_init(void) {
 /**@brief Function for starting timers.
  */
 static void application_timers_start(void) {
-  /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
+/* YOUR_JOB: Start your timers. below is an example of how to start a timer.
        ret_code_t err_code;
        err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
        APP_ERROR_CHECK(err_code); */
+
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   ret_code_t err_code;
   err_code = app_timer_start(m_sampling_timer_id, TICKS_SAMPLING_INTERVAL, NULL);
   APP_ERROR_CHECK(err_code);
+#endif
 }
 
 /**@brief Function for putting the chip into sleep mode.
@@ -724,7 +729,9 @@ static void ads1299_gpio_init(void) {
   ads1299_powerdn();
 }
 #endif /* defined(ADS1299) */
-
+static void wait_for_event(void) {
+  (void)sd_app_evt_wait();
+}
 /**@brief Function for application main entry.
  */
 int main(void) {
@@ -764,28 +771,36 @@ int main(void) {
 #endif
   uint16_t samples = 0;
   int32_t eeg1 = 0x0000;
-  uint8_t eegData[3] = {0x00, 0x00, 0x00};
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
   // Enter main loop.
   for (;;) {
-    if (NRF_LOG_PROCESS() == false) {
-      power_manage();
-      if (m_drdy) {
-        m_drdy = false;
-        samples += 1;
-        get_eeg_voltage_sample(&eeg1); //Acquire Data Samples
-        ble_eeg_update_1ch(&m_eeg, &eeg1);//Put 32-bit data samples into buffer
-      }
+    //    if (NRF_LOG_PROCESS() == false && !m_connected) {
+
+    if (m_drdy) {
+      m_drdy = false;
+
+      get_eeg_voltage_sample(&eeg1);     //Acquire Data Samples
+      ble_eeg_update_1ch(&m_eeg, &eeg1); //Put 32-bit data samples into buffer
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
-      if (m_timer) {
-        m_timer = false;
-#if LOG_LOW_DETAIL == 1
-        NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
-#endif
-        samples = 0;
-      }
+      samples += 1;
 #endif
     }
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
+    if (m_timer) {
+      m_timer = false;
+#if LOG_LOW_DETAIL == 1
+      NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
+#endif
+      samples = 0;
+    }
+#endif
+#if NRF_LOG_ENABLED == 1
+    if (!NRF_LOG_PROCESS()) {
+      wait_for_event();
+//      power_manage();
+    }
+#endif
+    
   }
 }
 

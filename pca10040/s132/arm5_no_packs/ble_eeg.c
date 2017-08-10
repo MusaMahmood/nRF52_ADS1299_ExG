@@ -138,20 +138,6 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
 
   p_eeg->busy = false;
   p_eeg->packets_sent = 0;
-
-  /*ble_add_char_params_t amt_params;
-  memset(&amt_params, 0, sizeof(amt_params));
-
-  amt_params.uuid = BLE_UUID_EEG_CH1_CHAR;
-  amt_params.uuid_type = p_eeg->uuid_type;
-  amt_params.max_len = MAX_LEN_BLE_PACKET_BYTES;
-  amt_params.char_props.notify = 1;
-  amt_params.write_access = 0;
-  amt_params.cccd_write_access = SEC_OPEN;
-  amt_params.is_var_len = 1;
-
-  err_code = characteristic_add(service_handle, &amt_params, &(p_eeg->eeg_ch1_handles));
-  APP_ERROR_CHECK(err_code);*/
 }
 
 #if defined(ADS1299)

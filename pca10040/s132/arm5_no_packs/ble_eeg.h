@@ -53,7 +53,7 @@
 #define BLE_UUID_EEG_CH4_CHAR 0xEEF4
 
 // Maximum number of body voltage measurement bytes buffered by the application
-#define BLE_EEG_MAX_BUFFERED_MEASUREMENTS 83 //NOTE: 82 * 3 Bytes = 246 B
+#define BLE_EEG_MAX_BUFFERED_MEASUREMENTS 120 //NOTE: 82 * 3 Bytes = 246 B
 
 
 
