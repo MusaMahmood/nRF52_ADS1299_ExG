@@ -102,7 +102,7 @@ const nrf_drv_timer_t TIMER_SAMPLERATE = NRF_DRV_TIMER_INSTANCE(0);
 #endif
 
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
-#define TICKS_SAMPLING_INTERVAL APP_TIMER_TICKS(1000)
+#define TICKS_SAMPLING_INTERVAL APP_TIMER_TICKS(5000)
 APP_TIMER_DEF(m_sampling_timer_id);
 static bool m_timer = false;
 #endif
@@ -761,6 +761,10 @@ int main(void) {
   ads1299_start_rdatac();
   ads1299_standby();
   nrf_delay_ms(10);
+  nrf_delay_ms(10);
+  nrf_delay_ms(10);
+  nrf_delay_ms(10);
+//  ads1299_wake();
 #endif
   // Start execution.
   application_timers_start();
@@ -769,18 +773,23 @@ int main(void) {
   nrf_gpio_pin_clear(LED_2); // Green
   nrf_gpio_pin_set(LED_1);   //Blue
 #endif
-  uint16_t samples = 0;
-  int32_t eeg1 = 0x0000;
+  uint32_t samples = 0;
+  m_eeg.eeg_ch1_count = 0;
   NRF_LOG_INFO(" BLE Advertising Start! \r\n");
   // Enter main loop.
   for (;;) {
-    //    if (NRF_LOG_PROCESS() == false && !m_connected) {
-
+    if (!m_connected) power_manage();
     if (m_drdy) {
       m_drdy = false;
-
-      get_eeg_voltage_sample(&eeg1);     //Acquire Data Samples
-      ble_eeg_update_1ch(&m_eeg, &eeg1); //Put 32-bit data samples into buffer
+      get_eeg_voltage_array(&m_eeg);
+      if(m_eeg.eeg_ch1_count==246) {
+      #if LOG_HIGH_DETAIL == 1
+      NRF_LOG_INFO("E2[0x%X%X%X]\r\n",eeg_data[0],eeg_data[1],eeg_data[2]);
+      #endif
+        m_eeg.eeg_ch1_count = 0;
+        ble_eeg_update_1ch_v2(&m_eeg); 
+      }
+      
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
       samples += 1;
 #endif
@@ -789,7 +798,7 @@ int main(void) {
     if (m_timer) {
       m_timer = false;
 #if LOG_LOW_DETAIL == 1
-      NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples);
+      NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", samples/5);
 #endif
       samples = 0;
     }
@@ -797,7 +806,6 @@ int main(void) {
 #if NRF_LOG_ENABLED == 1
     if (!NRF_LOG_PROCESS()) {
       wait_for_event();
-//      power_manage();
     }
 #endif
     

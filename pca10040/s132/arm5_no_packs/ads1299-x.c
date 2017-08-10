@@ -5,6 +5,7 @@
 #include "nrf_drv_spi.h"
 #include "nrf_gpio.h"
 #include "nrf_log.h"
+#include "ble_eeg.h"
 /**@headers for µs delay:*/
 #include "compiler_abstraction.h"
 #include "nrf.h"
@@ -303,20 +304,21 @@ void get_eeg_voltage_sample(int32_t *eeg1) {
   } while (cnt < 255);
 }
 
-void get_eeg_voltage_array(uint8_t *eeg_array) {
+void get_eeg_voltage_array(ble_eeg_t *p_eeg) {
   uint8_t tx_rx_data[6]; uint8_t cnt = 0;
   memset(tx_rx_data,0,6);
   spi_xfer_done = false;
   APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
   while (!spi_xfer_done) { __WFE(); }
-  do {
-    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
-      *eeg_array = tx_rx_data[3];//((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
-#if LOG_HIGH_DETAIL == 1
-      NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
-#endif
-      break;
-    }
-    cnt++;
-  } while (cnt < 255);
+//  nrf_delay_us(10);
+  p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[3];
+  p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[4];
+  p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[5];
+//  do {
+//    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
+//      p_eeg->eeg_ch1_buffer
+//      break;
+//    }
+//    cnt++;
+//  } while (cnt < 255);
 }

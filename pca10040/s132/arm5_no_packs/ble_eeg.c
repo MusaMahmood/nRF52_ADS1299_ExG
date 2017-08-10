@@ -54,20 +54,20 @@ static uint8_t bvm_encode_24(ble_eeg_t *p_eeg, uint8_t *p_encoded_buffer, int en
   uint8_t len = 0;
   int i;
   // Encode body voltage measurement
-  
-    for (i = 0; i < p_eeg->eeg_ch1_count; i++) {
-      if (len + sizeof(uint16_t) + sizeof(uint8_t) > MAX_LEN_BLE_PACKET_BYTES) {
-        // Not all stored voltage values can fit into the packet, so
-        // move the remaining values to the start of the buffer.
-        memmove(&p_eeg->eeg_ch1_buffer[0],
-            &p_eeg->eeg_ch1_buffer[i],
-            (p_eeg->eeg_ch1_count - i) * sizeof(uint32_t));
-        break;
-      }
-      len += uint24_encode(p_eeg->eeg_ch1_buffer[i], &p_encoded_buffer[len]); //len+=3;
+
+  for (i = 0; i < p_eeg->eeg_ch1_count; i++) {
+    if (len + sizeof(uint16_t) + sizeof(uint8_t) > MAX_LEN_BLE_PACKET_BYTES) {
+      // Not all stored voltage values can fit into the packet, so
+      // move the remaining values to the start of the buffer.
+      memmove(&p_eeg->eeg_ch1_buffer[0],
+          &p_eeg->eeg_ch1_buffer[i],
+          (p_eeg->eeg_ch1_count - i) * sizeof(uint32_t));
+      break;
     }
-    p_eeg->eeg_ch1_count -= i;
-    
+    len += uint24_encode(p_eeg->eeg_ch1_buffer[i], &p_encoded_buffer[len]); //len+=3;
+  }
+  p_eeg->eeg_ch1_count -= i;
+
   return len;
 }
 
@@ -147,6 +147,24 @@ void ble_eeg_update_1ch(ble_eeg_t *p_eeg, int32_t *eeg1) {
   p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = *eeg1; // Add new value to 32-bit buffer
   if (p_eeg->eeg_ch1_count == BLE_EEG_MAX_BUFFERED_MEASUREMENTS) {
     ble_eeg_send_24bit_array_ch1(p_eeg);
+  }
+}
+
+void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg) {
+  uint32_t err_code;
+  if (p_eeg->conn_handle != BLE_CONN_HANDLE_INVALID) {
+    uint16_t len;
+    uint16_t hvx_len;
+    ble_gatts_hvx_params_t hvx_params;
+    len = 246;
+    hvx_len = len;
+    memset(&hvx_params, 0, sizeof(hvx_params));
+    hvx_params.handle = p_eeg->eeg_ch1_handles.value_handle;
+    hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
+    hvx_params.offset = 0;
+    hvx_params.p_len = &hvx_len;
+    hvx_params.p_data = p_eeg->eeg_ch1_buffer;
+    err_code = sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
   }
 }
 

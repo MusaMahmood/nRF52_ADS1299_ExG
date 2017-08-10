@@ -65,7 +65,8 @@ typedef struct
   uint16_t conn_handle;    /**< Event handler to be called for handling events in the Biopotential Measurement Service. */
   uint16_t service_handle; /**< Handle of ble Service (as provided by the BLE stack). */
   ble_gatts_char_handles_t eeg_ch1_handles; /**< Handles related to the our body V measure characteristic. */
-  uint32_t eeg_ch1_buffer[BLE_EEG_MAX_BUFFERED_MEASUREMENTS];
+//  uint32_t eeg_ch1_buffer[BLE_EEG_MAX_BUFFERED_MEASUREMENTS];
+  uint8_t eeg_ch1_buffer[246];
   uint8_t eeg_ch1_count;
   bool busy;
   uint32_t packets_sent;
@@ -87,6 +88,7 @@ void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt);
 */
 
 void ble_eeg_update_1ch(ble_eeg_t *p_eeg, int32_t *eeg1);
+void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg);
 
 uint32_t ble_eeg_send_24bit_array_ch1(ble_eeg_t *p_eeg);
 
