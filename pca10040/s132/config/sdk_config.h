@@ -3072,7 +3072,7 @@
 #if  APP_TIMER_ENABLED
 
 #ifndef APP_TIMER_SAMPLING
-#define APP_TIMER_SAMPLING 1
+#define APP_TIMER_SAMPLING 0
 #endif
 
 // <o> APP_TIMER_CONFIG_RTC_FREQUENCY  - Configure RTC prescaler.

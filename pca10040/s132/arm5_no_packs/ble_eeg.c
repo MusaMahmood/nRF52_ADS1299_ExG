@@ -41,40 +41,17 @@ void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt) {
     break;
 
   case BLE_GATTS_EVT_HVN_TX_COMPLETE:
-    if (p_eeg->busy) {
-      p_eeg->busy = false;
-    }
     break;
   default:
     break;
   }
 }
 
-static uint8_t bvm_encode_24(ble_eeg_t *p_eeg, uint8_t *p_encoded_buffer, int encodeChannel) {
-  uint8_t len = 0;
-  int i;
-  // Encode body voltage measurement
-
-  for (i = 0; i < p_eeg->eeg_ch1_count; i++) {
-    if (len + sizeof(uint16_t) + sizeof(uint8_t) > MAX_LEN_BLE_PACKET_BYTES) {
-      // Not all stored voltage values can fit into the packet, so
-      // move the remaining values to the start of the buffer.
-      memmove(&p_eeg->eeg_ch1_buffer[0],
-          &p_eeg->eeg_ch1_buffer[i],
-          (p_eeg->eeg_ch1_count - i) * sizeof(uint32_t));
-      break;
-    }
-    len += uint24_encode(p_eeg->eeg_ch1_buffer[i], &p_encoded_buffer[len]); //len+=3;
-  }
-  p_eeg->eeg_ch1_count -= i;
-
-  return len;
-}
-
 static uint32_t eeg_ch1_char_add(ble_eeg_t *p_eeg) {
   uint32_t err_code = 0;
   ble_uuid_t char_uuid;
   uint8_t encoded_initial_eeg[MAX_LEN_BLE_PACKET_BYTES];
+  memset(encoded_initial_eeg, 0, MAX_LEN_BLE_PACKET_BYTES);
   BLE_UUID_BLE_ASSIGN(char_uuid, BLE_UUID_EEG_CH1_CHAR);
 
   ble_gatts_char_md_t char_md;
@@ -101,7 +78,7 @@ static uint32_t eeg_ch1_char_add(ble_eeg_t *p_eeg) {
   memset(&attr_char_value, 0, sizeof(attr_char_value));
   attr_char_value.p_uuid = &char_uuid;
   attr_char_value.p_attr_md = &attr_md;
-  attr_char_value.init_len = bvm_encode_24(p_eeg, encoded_initial_eeg, 1);
+  attr_char_value.init_len = 246;
   attr_char_value.init_offs = 0;
   attr_char_value.max_len = MAX_LEN_BLE_PACKET_BYTES;
   attr_char_value.p_value = encoded_initial_eeg;
@@ -133,59 +110,30 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
 
   err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &service_uuid, &service_handle);
   APP_ERROR_CHECK(err_code);
+
   //Add Characteristic:
   eeg_ch1_char_add(p_eeg);
-
-  p_eeg->busy = false;
-  p_eeg->packets_sent = 0;
 }
 
 #if defined(ADS1299)
-/**@Update adds single int16_t voltage value: */
-void ble_eeg_update_1ch(ble_eeg_t *p_eeg, int32_t *eeg1) {
-  //add new value:
-  p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = *eeg1; // Add new value to 32-bit buffer
-  if (p_eeg->eeg_ch1_count == BLE_EEG_MAX_BUFFERED_MEASUREMENTS) {
-    ble_eeg_send_24bit_array_ch1(p_eeg);
-  }
-}
 
 void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg) {
   uint32_t err_code;
   if (p_eeg->conn_handle != BLE_CONN_HANDLE_INVALID) {
-    uint16_t len;
     uint16_t hvx_len;
     ble_gatts_hvx_params_t hvx_params;
-    len = 246;
-    hvx_len = len;
+    hvx_len = 246;
     memset(&hvx_params, 0, sizeof(hvx_params));
     hvx_params.handle = p_eeg->eeg_ch1_handles.value_handle;
     hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
     hvx_params.offset = 0;
     hvx_params.p_len = &hvx_len;
     hvx_params.p_data = p_eeg->eeg_ch1_buffer;
-    err_code = sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
+    sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
+//#if LOG_LOW_DETAIL == 1
+//    if(err_code != NRF_SUCCESS) NRF_LOG_INFO("SD_BLE_GATT_HVX ERROR: 0x%x\r\n",err_code);
+//#endif
   }
-}
-
-uint32_t ble_eeg_send_24bit_array_ch1(ble_eeg_t *p_eeg) {
-  uint32_t err_code;
-  if (p_eeg->conn_handle != BLE_CONN_HANDLE_INVALID) {
-    uint8_t encoded_eeg[MAX_LEN_BLE_PACKET_BYTES];
-    uint16_t len;
-    uint16_t hvx_len;
-    ble_gatts_hvx_params_t hvx_params;
-    len = bvm_encode_24(p_eeg, encoded_eeg, 1);
-    hvx_len = len;
-    memset(&hvx_params, 0, sizeof(hvx_params));
-    hvx_params.handle = p_eeg->eeg_ch1_handles.value_handle;
-    hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
-    hvx_params.offset = 0;
-    hvx_params.p_len = &hvx_len;
-    hvx_params.p_data = encoded_eeg;
-    err_code = sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
-  }
-  return err_code;
 }
 
 #endif //(defined(ADS1299)

@@ -6,12 +6,10 @@
 #include "nrf_gpio.h"
 #include "nrf_log.h"
 #include "ble_eeg.h"
-/**@headers for µs delay:*/
+/**headers for µs delay:*/
 #include "compiler_abstraction.h"
 #include "nrf.h"
 #include <stdio.h>
-
-#define SPI_INSTANCE 0
 
 //NOTE: ADS1299 Default Registers
 uint8_t ads1299_default_registers[] = {
@@ -54,11 +52,6 @@ static volatile bool spi_xfer_done;
 void spi_event_handler(nrf_drv_spi_evt_t const *p_event,
     void *p_context) {
   spi_xfer_done = true;
-  //  NRF_LOG_INFO("Transfer completed.\r\n");
-  //  if (m_rx_buf[0] != 0) {
-  //    NRF_LOG_INFO(" Received: \r\n");
-  //    NRF_LOG_HEXDUMP_INFO(m_rx_buf, strlen((const char *)m_rx_buf));
-  //  }
 }
 
 void ads_spi_init(void) {
@@ -262,63 +255,14 @@ void ads1299_init_regs(void) {
  * @details Uses SPI
  *          
  */
-void get_eeg_voltage_samples(int32_t *eeg1, int32_t *eeg2, int32_t *eeg3, int32_t *eeg4) {
-  uint8_t cnt = 0; 
-  uint8_t tx_rx_data[15] = {0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00};
-  spi_xfer_done = false;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 15, tx_rx_data, 15));
-  
-  while (!spi_xfer_done) { __WFE(); }
-  do {
-    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
-      *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
-      *eeg2 = ((tx_rx_data[6] << 16) | (tx_rx_data[7] << 8) | (tx_rx_data[8]));
-      *eeg3 = ((tx_rx_data[9] << 16) | (tx_rx_data[10] << 8) | (tx_rx_data[11]));
-      *eeg4 = ((tx_rx_data[12] << 16) | (tx_rx_data[13] << 8) | (tx_rx_data[14]));
-      break;
-    }
-    cnt++;
-    nrf_delay_us(1);
-  } while (cnt < 255);
-}
-
-void get_eeg_voltage_sample(int32_t *eeg1) {
-  uint8_t tx_rx_data[6]; uint8_t cnt = 0;
-  memset(tx_rx_data,0,6);
-  spi_xfer_done = false;
-  APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
-  while (!spi_xfer_done) { __WFE(); }
-  do {
-    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
-      *eeg1 = ((tx_rx_data[3] << 16) | (tx_rx_data[4] << 8) | (tx_rx_data[5]));
-#if LOG_HIGH_DETAIL == 1
-      NRF_LOG_INFO("[0x%x]\r\n",*eeg1);
-#endif
-      break;
-    }
-    cnt++;
-  } while (cnt < 255);
-}
 
 void get_eeg_voltage_array(ble_eeg_t *p_eeg) {
-  uint8_t tx_rx_data[6]; uint8_t cnt = 0;
-  memset(tx_rx_data,0,6);
   spi_xfer_done = false;
+  uint8_t tx_rx_data[6];
+  memset(tx_rx_data,0,6);
   APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
   while (!spi_xfer_done) { __WFE(); }
-//  nrf_delay_us(10);
   p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[3];
   p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[4];
   p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[5];
-//  do {
-//    if (((tx_rx_data[0] << 16) | (tx_rx_data[1] << 8) | (tx_rx_data[2]))==0xC00000) {
-//      p_eeg->eeg_ch1_buffer
-//      break;
-//    }
-//    cnt++;
-//  } while (cnt < 255);
 }
