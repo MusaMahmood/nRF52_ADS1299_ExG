@@ -32,18 +32,18 @@
 
 void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt) {
   switch (p_ble_evt->header.evt_id) {
-  case BLE_GAP_EVT_CONNECTED:
-    p_eeg->conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
-    break;
+    case BLE_GAP_EVT_CONNECTED:
+      p_eeg->conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+      break;
 
-  case BLE_GAP_EVT_DISCONNECTED:
-    p_eeg->conn_handle = BLE_CONN_HANDLE_INVALID;
-    break;
-
-  case BLE_GATTS_EVT_HVN_TX_COMPLETE:
-    break;
-  default:
-    break;
+    case BLE_GAP_EVT_DISCONNECTED:
+      p_eeg->conn_handle = BLE_CONN_HANDLE_INVALID;
+      break;
+//    case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+//    
+//      break;
+    default:
+      break;
   }
 }
 
@@ -87,7 +87,6 @@ static uint32_t eeg_ch1_char_add(ble_eeg_t *p_eeg) {
       &attr_char_value,
       &p_eeg->eeg_ch1_handles);
   APP_ERROR_CHECK(err_code);
-
   return NRF_SUCCESS;
 }
 
@@ -120,19 +119,15 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
 void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg) {
   uint32_t err_code;
   if (p_eeg->conn_handle != BLE_CONN_HANDLE_INVALID) {
-    uint16_t hvx_len;
-    ble_gatts_hvx_params_t hvx_params;
-    hvx_len = 246;
-    memset(&hvx_params, 0, sizeof(hvx_params));
-    hvx_params.handle = p_eeg->eeg_ch1_handles.value_handle;
-    hvx_params.type = BLE_GATT_HVX_NOTIFICATION;
-    hvx_params.offset = 0;
-    hvx_params.p_len = &hvx_len;
-    hvx_params.p_data = p_eeg->eeg_ch1_buffer;
+    uint16_t hvx_len = 246;
+    ble_gatts_hvx_params_t const hvx_params = {
+      .handle = p_eeg->eeg_ch1_handles.value_handle,
+      .type = BLE_GATT_HVX_NOTIFICATION,
+      .offset = 0,
+      .p_len = &hvx_len,
+      .p_data = p_eeg->eeg_ch1_buffer,
+    };
     sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
-//#if LOG_LOW_DETAIL == 1
-//    if(err_code != NRF_SUCCESS) NRF_LOG_INFO("SD_BLE_GATT_HVX ERROR: 0x%x\r\n",err_code);
-//#endif
   }
 }
 

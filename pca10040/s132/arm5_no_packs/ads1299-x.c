@@ -258,8 +258,7 @@ void ads1299_init_regs(void) {
 
 void get_eeg_voltage_array(ble_eeg_t *p_eeg) {
   spi_xfer_done = false;
-  uint8_t tx_rx_data[6];
-  memset(tx_rx_data,0,6);
+  uint8_t tx_rx_data[6] = {0,0,0,0,0,0};
   APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, tx_rx_data, 6, tx_rx_data, 6));
   while (!spi_xfer_done) { __WFE(); }
   p_eeg->eeg_ch1_buffer[p_eeg->eeg_ch1_count++] = tx_rx_data[3];
