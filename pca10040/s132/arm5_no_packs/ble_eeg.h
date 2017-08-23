@@ -60,7 +60,7 @@ typedef struct
   uint16_t service_handle; /**< Handle of ble Service (as provided by the BLE stack). */
   ble_gatts_char_handles_t eeg_ch1_handles; /**< Handles related to the our body V measure characteristic. */
   uint8_t eeg_ch1_buffer[EEG_PACKET_LENGTH]; //246 or 4* = 
-  uint8_t eeg_ch2_buffer[EEG_PACKET_LENGTH]; //246 or 4* = 
+//  uint8_t eeg_ch2_buffer[EEG_PACKET_LENGTH]; //246 or 4* = 
   uint16_t eeg_ch1_count;
 } ble_eeg_t;
 
