@@ -29,6 +29,7 @@
 #include <string.h>
 
 #define MAX_LEN_BLE_PACKET_BYTES 246 //20*3bytes																						 /**< Maximum size in bytes of a transmitted Body Voltage Measurement. */
+ //20*3bytes																						 /**< Maximum size in bytes of a transmitted Body Voltage Measurement. */
 
 void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt) {
   switch (p_ble_evt->header.evt_id) {
@@ -50,8 +51,8 @@ void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt) {
 static uint32_t eeg_ch1_char_add(ble_eeg_t *p_eeg) {
   uint32_t err_code = 0;
   ble_uuid_t char_uuid;
-  uint8_t encoded_initial_eeg[MAX_LEN_BLE_PACKET_BYTES];
-  memset(encoded_initial_eeg, 0, MAX_LEN_BLE_PACKET_BYTES);
+  uint8_t encoded_initial_eeg[EEG_PACKET_LENGTH];
+  memset(encoded_initial_eeg, 0, EEG_PACKET_LENGTH);
   BLE_UUID_BLE_ASSIGN(char_uuid, BLE_UUID_EEG_CH1_CHAR);
 
   ble_gatts_char_md_t char_md;
@@ -78,9 +79,9 @@ static uint32_t eeg_ch1_char_add(ble_eeg_t *p_eeg) {
   memset(&attr_char_value, 0, sizeof(attr_char_value));
   attr_char_value.p_uuid = &char_uuid;
   attr_char_value.p_attr_md = &attr_md;
-  attr_char_value.init_len = 246;
+  attr_char_value.init_len = EEG_PACKET_LENGTH;
   attr_char_value.init_offs = 0;
-  attr_char_value.max_len = MAX_LEN_BLE_PACKET_BYTES;
+  attr_char_value.max_len = EEG_PACKET_LENGTH;
   attr_char_value.p_value = encoded_initial_eeg;
   err_code = sd_ble_gatts_characteristic_add(p_eeg->service_handle,
       &char_md,
@@ -119,7 +120,7 @@ void ble_eeg_service_init(ble_eeg_t *p_eeg) {
 void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg) {
   uint32_t err_code;
   if (p_eeg->conn_handle != BLE_CONN_HANDLE_INVALID) {
-    uint16_t hvx_len = 246;
+    uint16_t hvx_len = EEG_PACKET_LENGTH;
     ble_gatts_hvx_params_t const hvx_params = {
       .handle = p_eeg->eeg_ch1_handles.value_handle,
       .type = BLE_GATT_HVX_NOTIFICATION,
@@ -127,8 +128,15 @@ void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg) {
       .p_len = &hvx_len,
       .p_data = p_eeg->eeg_ch1_buffer,
     };
-    sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
+    err_code = sd_ble_gatts_hvx(p_eeg->conn_handle, &hvx_params);
+  } 
+  
+  if(err_code==NRF_ERROR_RESOURCES) {
+      NRF_LOG_INFO("sd_ble_gatts_hvx() ERR/RES: 0x%x\r\n", err_code);
+  } /*else if (err_code != NRF_SUCCESS) {
+      NRF_LOG_ERROR("sd_ble_gatts_hvx() failed: 0x%x\r\n", err_code);
   }
+//  */
 }
 
 #endif //(defined(ADS1299)

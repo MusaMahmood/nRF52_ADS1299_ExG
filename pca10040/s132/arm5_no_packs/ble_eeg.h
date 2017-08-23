@@ -49,6 +49,8 @@
 // Characteristic UUIDs
 #define BLE_UUID_EEG_CH1_CHAR 0xEEF1
 
+#define EEG_PACKET_LENGTH 246
+
 /**@brief Biopotential Measurement Service init structure. This contains all options and data needed for
  *        initialization of the service. */
 typedef struct
@@ -57,8 +59,9 @@ typedef struct
   uint16_t conn_handle;    /**< Event handler to be called for handling events in the Biopotential Measurement Service. */
   uint16_t service_handle; /**< Handle of ble Service (as provided by the BLE stack). */
   ble_gatts_char_handles_t eeg_ch1_handles; /**< Handles related to the our body V measure characteristic. */
-  uint8_t eeg_ch1_buffer[246];
-  uint8_t eeg_ch1_count;
+  uint8_t eeg_ch1_buffer[EEG_PACKET_LENGTH]; //246 or 4* = 
+  uint8_t eeg_ch2_buffer[EEG_PACKET_LENGTH]; //246 or 4* = 
+  uint16_t eeg_ch1_count;
 } ble_eeg_t;
 
 void ble_eeg_service_init(ble_eeg_t *p_eeg);
@@ -78,6 +81,7 @@ void ble_eeg_on_ble_evt(ble_eeg_t *p_eeg, ble_evt_t *p_ble_evt);
 
 void ble_eeg_update_1ch_v2(ble_eeg_t *p_eeg);
 
-uint32_t ble_eeg_send_24bit_array_ch1(ble_eeg_t *p_eeg);
+
+
 
 #endif // BLE_EEG_H__

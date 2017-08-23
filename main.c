@@ -67,20 +67,18 @@
 #include "ble_hci.h"
 #include "ble_srv_common.h"
 #include "boards.h"
-//#include "bsp_btn_ble.h"
 #include "fds.h"
 #include "fstorage.h"
 #include "nordic_common.h"
 #include "nrf.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_gpio.h"
-//#include "peer_manager.h"
 #include "sensorsim.h"
 #include "softdevice_handler.h"
-
 #define NRF_LOG_MODULE_NAME "APP"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+
 
 #if defined(ADS1299)
 //TODO: ADS1299 Stuff:
@@ -93,24 +91,24 @@
 #define DEVICE_FIRMWARE_STRING "Version 13.1.0"
 ble_eeg_t m_eeg;
 static bool m_connected = false;
+#define SPI_SCLK_WRITE_REG 2
+#define SPI_SCLK_SAMPLING 8
 #endif
 
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
 #define TICKS_SAMPLING_INTERVAL APP_TIMER_TICKS(1000)
 APP_TIMER_DEF(m_sampling_timer_id);
-static bool m_timer = false;
 static uint16_t m_samples;
 #endif
 #define APP_FEATURE_NOT_SUPPORTED BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2 /**< Reply when unsupported features are requested. */
 
-#define DEVICE_NAME "ExG 8kHz"          //"nRF52_EEG"         /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME "ExG 8kHz & MPU"    //"nRF52_EEG"         /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME "Potato Labs" /**< Manufacturer. Will be passed to Device Information Service. */
-//#define MANUFACTURER_NAME "YeoLabs"   /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL 300           /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS 180 /**< The advertising timeout in units of seconds. */
+#define APP_ADV_INTERVAL 300            /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_TIMEOUT_IN_SECONDS 180  /**< The advertising timeout in units of seconds. */
 
 #define MIN_CONN_INTERVAL MSEC_TO_UNITS(7.5, UNIT_1_25_MS) /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(25, UNIT_1_25_MS)  /**< Maximum acceptable connection interval (0.2 second). */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(20, UNIT_1_25_MS)  /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY 0                                    /**< Slave latency. */
 #define CONN_SUP_TIMEOUT MSEC_TO_UNITS(4000, UNIT_10_MS)   /**< Connection supervisory timeout (4 seconds). */
 
@@ -119,6 +117,8 @@ static uint16_t m_samples;
 #define FIRST_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(5000) /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY APP_TIMER_TICKS(30000) /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT 3                       /**< Number of attempts before giving up the connection parameter negotiation. */
+
+#define HVN_TX_QUEUE_SIZE 8
 
 #define SEC_PARAM_BOND 1                               /**< Perform bonding. */
 #define SEC_PARAM_MITM 0                               /**< Man In The Middle protection not required. */
@@ -134,16 +134,12 @@ static uint16_t m_samples;
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
 static nrf_ble_gatt_t m_gatt;                            /**< GATT module instance. */
 
-/* YOUR_JOB: Declare all services structure your application is using
-   static ble_xx_service_t                     m_xxs;
-   static ble_yy_service_t                     m_yys;
- */
-
-// YOUR_JOB: Use UUIDs for service(s) used in your application.
-//static ble_uuid_t m_adv_uuids[] = {{BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 static ble_uuid_t m_adv_uuids[] =
     {
         {BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE, BLE_UUID_TYPE_BLE},
+        #if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+        {BLE_UUID_MPU_SERVICE_UUID, BLE_UUID_TYPE_BLE},
+        #endif
         {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 
 static void advertising_start(void);
@@ -166,19 +162,40 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
 static void m_sampling_timeout_handler(void *p_context) {
   UNUSED_PARAMETER(p_context);
-  m_timer = true;
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
+#if LOG_LOW_DETAIL == 1
+  NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", m_samples);
+#endif
+  m_samples = 0;
+#endif
 }
 #endif
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+static void mpu_send_timeout_handler(void *p_context) {
+  //DEPENDS ON SAMPLING RATE
+  mpu_read_accel_array(&m_mpu);
+  mpu_read_gyro_array(&m_mpu);
+  if (m_mpu.mpu_count == 240) {
+    m_mpu.mpu_count = 0;
+    ble_mpu_combined_update_v2(&m_mpu);
+  }
+}
+#endif /**@(defined(MPU60x0) || defined(MPU9150) || defined(MPU9255))*/
+
 /**@brief Function for the Timer initialization.
  *
  * @details Initializes the timer module. This creates and starts application timers.
  */
 static void timers_init(void) {
-  // Initialize timer module.
+  // Initialize timer module..
+  //Create timers
   ret_code_t err_code = app_timer_init();
   APP_ERROR_CHECK(err_code);
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+  err_code = app_timer_create(&m_mpu_send_timer_id, APP_TIMER_MODE_REPEATED, mpu_send_timeout_handler);
+  APP_ERROR_CHECK(err_code);
+#endif
 
-//TODO Create timers
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   err_code = app_timer_create(&m_sampling_timer_id, APP_TIMER_MODE_REPEATED, m_sampling_timeout_handler);
   APP_ERROR_CHECK(err_code);
@@ -253,8 +270,10 @@ static void on_yys_evt(ble_yy_service_t     * p_yy_service,
 /**@brief Function for initializing services that will be used by the application.
  */
 static void services_init(void) {
-  //TODO:
   ble_eeg_service_init(&m_eeg);
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+  ble_mpu_service_init(&m_mpu);
+#endif
   /**@Device Information Service:*/
   uint32_t err_code;
   ble_dis_init_t dis_init;
@@ -319,14 +338,18 @@ static void conn_params_init(void) {
 /**@brief Function for starting timers.
  */
 static void application_timers_start(void) {
-/* YOUR_JOB: Start your timers. below is an example of how to start a timer.
+  /* YOUR_JOB: Start your timers. below is an example of how to start a timer.
        ret_code_t err_code;
        err_code = app_timer_start(m_app_timer_id, TIMER_INTERVAL, NULL);
        APP_ERROR_CHECK(err_code); */
-
-#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   ret_code_t err_code;
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   err_code = app_timer_start(m_sampling_timer_id, TICKS_SAMPLING_INTERVAL, NULL);
+  APP_ERROR_CHECK(err_code);
+#endif
+
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+  err_code = app_timer_start(m_mpu_send_timer_id, TICKS_MPU_SAMPLING_INTERVAL, NULL);
   APP_ERROR_CHECK(err_code);
 #endif
 }
@@ -351,12 +374,12 @@ static void sleep_mode_enter(void) {
  */
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt) {
   ret_code_t err_code;
-
   switch (ble_adv_evt) {
   case BLE_ADV_EVT_FAST:
     NRF_LOG_INFO("Fast advertising.\r\n");
     APP_ERROR_CHECK(err_code);
-#if defined(BOARD_EXG_V3)
+//#if defined(BOARD_EXG_V3)
+#if LEDS_ENABLE == 1
     nrf_gpio_pin_clear(LED_2); // Green
     nrf_gpio_pin_set(LED_1);   //Blue
 #endif
@@ -385,7 +408,7 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
 #if defined(ADS1299)
     ads1299_standby();
 #endif
-#if defined(BOARD_EXG_V3)
+#if LEDS_ENABLE == 1
     nrf_gpio_pin_clear(LED_2); // Green
     nrf_gpio_pin_set(LED_1);   //Blue
 #endif
@@ -393,16 +416,19 @@ static void on_ble_evt(ble_evt_t *p_ble_evt) {
     break; // BLE_GAP_EVT_DISCONNECTED
 
   case BLE_GAP_EVT_CONNECTED:
-    m_connected = true;
+    ads_spi_uninit();
+    ads_spi_init_with_sample_freq(SPI_SCLK_SAMPLING);
 #if defined(ADS1299)
     ads1299_wake();
 #endif
-#if defined(BOARD_EXG_V3)
+//#if defined(BOARD_EXG_V3)
+#if LEDS_ENABLE == 1
     nrf_gpio_pin_set(LED_2);
     nrf_gpio_pin_clear(LED_1);
 #endif
     NRF_LOG_INFO("Connected.\r\n");
     m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+    m_connected = true;
     break; // BLE_GAP_EVT_CONNECTED
 
   case BLE_GATTC_EVT_TIMEOUT:
@@ -474,6 +500,9 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
   nrf_ble_gatt_on_ble_evt(&m_gatt, p_ble_evt);
 
   ble_eeg_on_ble_evt(&m_eeg, p_ble_evt);
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+  ble_mpu_on_ble_evt(&m_mpu, p_ble_evt);
+#endif
 }
 
 /**@brief Function for dispatching a system event to interested modules.
@@ -516,7 +545,7 @@ static void ble_stack_init(void) {
 
   // Configure number of custom UUIDS.
   memset(&ble_cfg, 0, sizeof(ble_cfg));
-  ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 1;
+  ble_cfg.common_cfg.vs_uuid_cfg.vs_uuid_count = 1; //2?
   err_code = sd_ble_cfg_set(BLE_COMMON_CFG_VS_UUID, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
 
@@ -541,6 +570,13 @@ static void ble_stack_init(void) {
   ble_cfg.conn_cfg.params.gap_conn_cfg.event_length = 320;
   ble_cfg.conn_cfg.params.gap_conn_cfg.conn_count = BLE_GAP_CONN_COUNT_DEFAULT;
   err_code = sd_ble_cfg_set(BLE_CONN_CFG_GAP, &ble_cfg, ram_start);
+  APP_ERROR_CHECK(err_code);
+
+  // Configure the number of packets per connection event:
+  memset(&ble_cfg, 0x00, sizeof(ble_cfg));
+  ble_cfg.conn_cfg.conn_cfg_tag = CONN_CFG_TAG;
+  ble_cfg.conn_cfg.params.gatts_conn_cfg.hvn_tx_queue_size = HVN_TX_QUEUE_SIZE;
+  err_code = sd_ble_cfg_set(BLE_CONN_CFG_GATTS, &ble_cfg, ram_start);
   APP_ERROR_CHECK(err_code);
 
   //*/
@@ -623,51 +659,77 @@ static void advertising_start(void) {
   ret_code_t err_code = sd_ble_gap_adv_start(&adv_params, CONN_CFG_TAG);
   APP_ERROR_CHECK(err_code);
 }
+
+#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
+///*
+//MPU9250;MPU9255
+void mpu_setup(void) {
+  ret_code_t ret_code;
+  // Initiate MPU driver
+  ret_code = mpu_init();
+  APP_ERROR_CHECK(ret_code); // Check for errors in return value
+
+  // Setup and configure the MPU with intial values
+  mpu_config_t p_mpu_config = MPU_DEFAULT_CONFIG(); // Load default values
+  p_mpu_config.smplrt_div = 19;                     // Change sampelrate. Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV). 19 gives a sample rate of 50Hz
+  p_mpu_config.accel_config.afs_sel = AFS_16G;      // Set accelerometer full scale range to 2G
+  ret_code = mpu_config(&p_mpu_config);             // Configure the MPU with above values
+  APP_ERROR_CHECK(ret_code);                        // Check for errors in return value
+}
 //*/
+#endif
 
 #if defined(ADS1299)
 
 void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
   UNUSED_PARAMETER(pin);
   UNUSED_PARAMETER(action);
-  get_eeg_voltage_array(&m_eeg);
-  if (m_eeg.eeg_ch1_count == 246) {
-  #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
-    m_samples += 1;
-    #endif
+  if (m_connected) {
+    get_eeg_voltage_array(&m_eeg);
+  }
+#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
+  m_samples += 1;
+#endif
+  if (m_eeg.eeg_ch1_count == EEG_PACKET_LENGTH) {
     m_eeg.eeg_ch1_count = 0;
     ble_eeg_update_1ch_v2(&m_eeg);
   }
 }
 
 static void ads1299_gpio_init(void) {
-#if defined(BOARD_PCA10040)
+#if defined(BOARD_PCA10040) && LEDS_ENABLE == 1
   nrf_gpio_cfg_output(LED_1);
   nrf_gpio_cfg_output(LED_2);
   nrf_gpio_cfg_output(LED_3);
   nrf_gpio_cfg_output(LED_4);
+  nrf_gpio_pin_set(LED_3);
+  nrf_gpio_pin_set(LED_4);
 #endif
 
 #if defined(BOARD_NRF_BREAKOUT) | defined(BOARD_PCA10028) | defined(BOARD_PCA10040) | defined(BOARD_EXG_V3)
   nrf_gpio_pin_dir_set(ADS1299_DRDY_PIN, NRF_GPIO_PIN_DIR_INPUT); //sets 'direction' = input/output
   nrf_gpio_pin_dir_set(ADS1299_PWDN_RST_PIN, NRF_GPIO_PIN_DIR_OUTPUT);
 #endif
-#if defined(BOARD_EXG_V3)
+#if defined(BOARD_EXG_V3) && LEDS_ENABLE == 1
   nrf_gpio_cfg_output(LED_1);
   nrf_gpio_cfg_output(LED_2);
+  nrf_gpio_pin_set(LED_1);
+  nrf_gpio_pin_set(LED_2);
 #endif
   uint32_t err_code;
   if (!nrf_drv_gpiote_is_init()) {
     err_code = nrf_drv_gpiote_init();
   }
-  NRF_LOG_INFO("nrf_drv_gpiote_init: %d\r\n", err_code);
+  NRF_LOG_RAW_INFO(" nrf_drv_gpiote_init: %d\r\n", err_code);
+  NRF_LOG_FLUSH();
   APP_ERROR_CHECK(err_code);
   bool is_high_accuracy = true;
   nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(is_high_accuracy);
   in_config.is_watcher = true;
   in_config.pull = NRF_GPIO_PIN_NOPULL;
   err_code = nrf_drv_gpiote_in_init(ADS1299_DRDY_PIN, &in_config, in_pin_handler);
-  NRF_LOG_INFO(" nrf_drv_gpiote_in_init: %d: \r\n", err_code);
+  NRF_LOG_RAW_INFO(" nrf_drv_gpiote_in_init: %d: \r\n", err_code);
+  NRF_LOG_FLUSH();
   APP_ERROR_CHECK(err_code);
   nrf_drv_gpiote_in_event_enable(ADS1299_DRDY_PIN, true);
   ads1299_powerdn();
@@ -694,7 +756,8 @@ int main(void) {
   services_init();
   conn_params_init();
 #if defined(ADS1299)
-  ads_spi_init();
+  //  ads_spi_init();
+  ads_spi_init_with_sample_freq(SPI_SCLK_WRITE_REG);
   nrf_delay_ms(5);
   ads1299_powerdn();
   ads1299_powerup();
@@ -707,37 +770,27 @@ int main(void) {
   nrf_delay_ms(10);
   m_eeg.eeg_ch1_count = 0;
 #endif
+
   // Start execution.
   application_timers_start();
   advertising_start();
-#if defined(BOARD_EXG_V3)
+  NRF_LOG_RAW_INFO(" BLE Advertising Start! \r\n");
+  NRF_LOG_FLUSH();
+#if LEDS_ENABLE == 1
   nrf_gpio_pin_clear(LED_2); // Green
   nrf_gpio_pin_set(LED_1);   //Blue
 #endif
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   m_samples = 0;
 #endif
-  
-  NRF_LOG_INFO(" BLE Advertising Start! \r\n");
-  // Enter main loop.
-  for (;;) {
-//    if (!m_connected) {power_manage();}
-
-#if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
-    if (m_timer) {
-      m_timer = false;
-#if LOG_LOW_DETAIL == 1
-      NRF_LOG_INFO("SAMPLE RATE = %dHz \r\n", m_samples );
-#endif
-      m_samples = 0;
-    }
-#endif
+// Enter main loop
 #if NRF_LOG_ENABLED == 1
+  for (;;) {
     if (!NRF_LOG_PROCESS()) {
       wait_for_event();
     }
-#endif
   }
+#endif
 }
 
 /**
