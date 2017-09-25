@@ -95,6 +95,13 @@ static bool m_connected = false;
 #define SPI_SCLK_SAMPLING 8
 #endif
 
+#if defined(MPU9250) || defined(MPU9255) //mpu_send_timeout_handler
+#include "app_mpu.h"
+#include "nrf_drv_twi.h"
+APP_TIMER_DEF(m_mpu_send_timer_id);
+#define TICKS_MPU_SAMPLING_INTERVAL APP_TIMER_TICKS(32)
+#endif
+
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
 #define TICKS_SAMPLING_INTERVAL APP_TIMER_TICKS(1000)
 APP_TIMER_DEF(m_sampling_timer_id);
@@ -137,9 +144,6 @@ static nrf_ble_gatt_t m_gatt;                            /**< GATT module instan
 static ble_uuid_t m_adv_uuids[] =
     {
         {BLE_UUID_BIOPOTENTIAL_EEG_MEASUREMENT_SERVICE, BLE_UUID_TYPE_BLE},
-        #if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
-        {BLE_UUID_MPU_SERVICE_UUID, BLE_UUID_TYPE_BLE},
-        #endif
         {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}}; /**< Universally unique service identifiers. */
 
 static void advertising_start(void);
@@ -271,9 +275,6 @@ static void on_yys_evt(ble_yy_service_t     * p_yy_service,
  */
 static void services_init(void) {
   ble_eeg_service_init(&m_eeg);
-#if (defined(MPU60x0) || defined(MPU9150) || defined(MPU9250) || defined(MPU9255))
-  ble_mpu_service_init(&m_mpu);
-#endif
   /**@Device Information Service:*/
   uint32_t err_code;
   ble_dis_init_t dis_init;
@@ -685,14 +686,14 @@ void in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
   UNUSED_PARAMETER(pin);
   UNUSED_PARAMETER(action);
   if (m_connected) {
-    get_eeg_voltage_array(&m_eeg);
+    get_eeg_voltage_array_2ch(&m_eeg);
   }
 #if defined(APP_TIMER_SAMPLING) && APP_TIMER_SAMPLING == 1
   m_samples += 1;
 #endif
   if (m_eeg.eeg_ch1_count == EEG_PACKET_LENGTH) {
     m_eeg.eeg_ch1_count = 0;
-    ble_eeg_update_1ch_v2(&m_eeg);
+    ble_eeg_update_2ch(&m_eeg);
   }
 }
 
@@ -770,7 +771,6 @@ int main(void) {
   nrf_delay_ms(10);
   m_eeg.eeg_ch1_count = 0;
 #endif
-
   // Start execution.
   application_timers_start();
   advertising_start();
